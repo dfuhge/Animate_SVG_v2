@@ -1,8 +1,8 @@
 import numpy as np
 from xml.dom import minidom
 from pathlib import Path
-from src.features.get_svg_size_pos import get_midpoint_of_path_bbox, get_begin_values_by_starting_pos
-from src.animations.transform_animation_predictor_output import transform_animation_predictor_output
+from src.postprocessing.get_svg_size_pos import get_midpoint_of_path_bbox, get_begin_values_by_starting_pos
+from src.postprocessing.transform_animation_predictor_output import transform_animation_predictor_output
 
 
 def create_animated_svg(file, animation_ids, model_output, filename_suffix="", save=True):
@@ -43,7 +43,7 @@ def create_animated_svg(file, animation_ids, model_output, filename_suffix="", s
                 pass
 
     if save:
-        filename = file.split('/')[-1].replace(".svg", "") + "_animation_" + filename_suffix
+        filename = file.split('/')[-1].replace(".svg", "") + "_animated"
         save_animated_svg(doc, filename)
 
     return begin_values, doc
