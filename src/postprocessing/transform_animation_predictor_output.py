@@ -1,11 +1,10 @@
-from src.features.get_svg_size_pos import get_svg_size, get_midpoint_of_path_bbox
-from src.features.get_style_attributes import get_style_attributes_path
-from src.features.get_svg_color_tendency import get_svg_color_tendencies
+from src.postprocessing.get_svg_size_pos import get_svg_size, get_midpoint_of_path_bbox
+from src.postprocessing.get_style_attributes import get_style_attributes_path
+from src.postprocessing.get_svg_color_tendency import get_svg_color_tendencies
 
 
 def transform_animation_predictor_output(file, animation_id, output):
     """ Function to translate the numeric model output to animation commands.
-
     Example: transform_animation_predictor_output("data/svgs/logo_1.svg", 0, [0,0,1,0,0,0,-1,-1,-1,0.42,-1,-1])
 
     Args:
