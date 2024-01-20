@@ -91,7 +91,7 @@ def train_loop(model, opt, loss_function, dataloader, device):
         prediction = model(source, target_input, tgt_mask)  # TODO adapt forward method: tgt_mask
 
         # Permute prediction to have batch size first again
-        prediction = prediction.permute(1, 2, 0)
+        #prediction = prediction.permute(1, 2, 0)
         loss = loss_function(prediction, target_expected)
 
         opt.zero_grad()
@@ -123,7 +123,7 @@ def validation_loop(model, loss_function, dataloader, device):
             prediction = model(source, target_input, tgt_mask)
 
             # Permute pred to have batch size first again
-            prediction = prediction.permute(1, 2, 0)
+            #prediction = prediction.permute(1, 2, 0)
             loss = loss_function(prediction, target_expected)
             total_loss += loss.detach().item()
 
