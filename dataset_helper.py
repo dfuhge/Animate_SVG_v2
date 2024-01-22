@@ -2,13 +2,78 @@ import numpy as np
 import pandas as pd
 import torch
 
-
 # SEQUENCE GENERATION
 PADDING_VALUE = float('-inf')
 
 
-def generate_input_sequence(logo_embeddings: pd.DataFrame, null_features: int, sequence_length: int,
-                            is_randomized: bool, is_padding: bool) -> torch.Tensor:
+def generate_dataset(dataframe_index: pd.DataFrame,
+                     input_sequences_dict: pd.DataFrame,
+                     output_sequences: pd.DataFrame,
+                     logos_list: dict) -> dict:
+    """
+
+    Args:
+        dataframe_index:
+        input_sequences_dict:
+        output_sequences:
+        logos_list:
+
+    Returns:
+
+    """
+    dataset = {
+        "is_bucketing": False,
+        "train": {
+            "input": [],
+            "output": []
+        },
+        "test": {
+            "input": [],
+            "output": []
+        }
+    }
+    for i, logo_info in dataframe_index.iterrows():
+        logo = logo_info['filename']  # e.g. logo_1
+        file = logo_info['file']  # e.g. logo_1_animation_2
+        print(f"Processing {logo} with {file}")
+
+        input_tensor = _generate_input_sequence(input_sequences_dict[logo].copy(),
+                                                null_features=14,  # TODO depends on architecture later
+                                                sequence_length=128,  # TODO design question: Max elements per Logo?
+                                                is_randomized=True,
+                                                is_padding=True)
+
+        output_tensor = _generate_output_sequence(
+            output_sequences[(output_sequences['filename'] == logo) & (output_sequences['file'] == file)].copy(),
+            sequence_length=15,  # TODO Currently the max length of animations + 1 for EOS
+            is_randomized=False,
+            is_padding=True
+        )
+        # append to lists
+        if logo in logos_list["train"]:
+            dataset["train"]["input"].append(input_tensor)
+            dataset["train"]["output"].append(output_tensor)
+
+        elif logo in logos_list["test"]:
+            dataset["test"]["input"].append(input_tensor)
+            dataset["test"]["output"].append(output_tensor)
+
+        else:
+            print(f"Some problem with {logo}. Neither in train or test set list.")
+
+    dataset["train"]["input"] = torch.stack(dataset["train"]["input"])
+    dataset["train"]["output"] = torch.stack(dataset["train"]["output"])
+    dataset["test"]["input"] = torch.stack(dataset["test"]["input"])
+    dataset["test"]["output"] = torch.stack(dataset["test"]["output"])
+
+    return dataset
+
+
+def _generate_input_sequence(logo_embeddings: pd.DataFrame,
+                             null_features: int,
+                             sequence_length: int,
+                             is_randomized: bool,
+                             is_padding: bool) -> torch.Tensor:
     """
     Build a torch tensor for the transformer input sequences.
     Includes
@@ -47,8 +112,10 @@ def generate_input_sequence(logo_embeddings: pd.DataFrame, null_features: int, s
     return torch.tensor(logo_embeddings.values)
 
 
-def generate_output_sequence(animation: pd.DataFrame, sequence_length: int, is_randomized: bool,
-                             is_padding: bool) -> torch.Tensor:
+def _generate_output_sequence(animation: pd.DataFrame,
+                              sequence_length: int,
+                              is_randomized: bool,
+                              is_padding: bool) -> torch.Tensor:
     """
     Build a torch tensor for the transformer output sequences.
     Includes
