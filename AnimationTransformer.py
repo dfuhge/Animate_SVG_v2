@@ -45,7 +45,6 @@ class AnimationTransformer(nn.Module):
 
 
 def get_tgt_mask(size) -> torch.tensor:
-    # Todo: Check if this is suitable for 3D as example is 2D
     # Generates a square matrix where the each row allows one word more to be seen
     mask = torch.tril(torch.ones(size, size) == 1)  # Lower triangular matrix
     mask = mask.float()
@@ -62,11 +61,22 @@ def get_tgt_mask(size) -> torch.tensor:
     return mask
 
 
-def create_pad_mask(self, matrix: torch.tensor, pad_value: int) -> torch.tensor:
-    # Todo: Check if this is needed, as padding is already set to float(-inf)
-    # If matrix = [1,2,3,0,0,0] where pad_value=0, the result mask is
+def create_pad_mask(self, matrix: torch.tensor, pad_token: int) -> torch.tensor:
+    # If matrix = [1,2,3,0,0,0] where pad_token=0, the result mask is
     # [False, False, False, True, True, True]
-    return matrix == pad_value
+    mask = []
+    print(matrix)
+    for i in range(0, matrix.size(0)):
+        seq = []
+        for j in range(0, matrix.size(1)):
+            if matrix[i, j, 0] == pad_token:
+                seq.append(True)
+            else:
+                seq.append(False)
+        mask.append(seq)
+    result = torch.tensor(mask)
+    print(matrix, result, result.shape)
+    return result
 
 
 def train_loop(model, opt, loss_function, dataloader, device):
