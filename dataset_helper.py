@@ -7,18 +7,24 @@ PADDING_VALUE = float('-inf')
 
 
 def generate_dataset(dataframe_index: pd.DataFrame,
-                     input_sequences_dict: pd.DataFrame,
+                     input_sequences_dict: dict,
                      output_sequences: pd.DataFrame,
-                     logos_list: dict) -> dict:
+                     logos_list: dict,
+                     sequence_length_input: int,
+                     sequence_length_output: int,
+                     ) -> dict:
     """
+    Builds the dataset and returns it
 
     Args:
-        dataframe_index:
-        input_sequences_dict:
-        output_sequences:
-        logos_list:
+        dataframe_index: dataframe containing the relevant indexes for the dataframes
+        input_sequences_dict: dictionary containing input sequences per logo
+        output_sequences: dataframe containing animations
+        logos_list: dictionary in train/test split containing list for logo ids
+        sequence_length_input: length of input sequence for padding
+        sequence_length_output: length of output sequence for padding
 
-    Returns:
+    Returns: dictionary containing the dataset for training/testing
 
     """
     dataset = {
@@ -39,13 +45,13 @@ def generate_dataset(dataframe_index: pd.DataFrame,
 
         input_tensor = _generate_input_sequence(input_sequences_dict[logo].copy(),
                                                 null_features=14,  # TODO depends on architecture later
-                                                sequence_length=128,  # TODO design question: Max elements per Logo?
+                                                sequence_length=sequence_length_input,
                                                 is_randomized=True,
                                                 is_padding=True)
 
         output_tensor = _generate_output_sequence(
             output_sequences[(output_sequences['filename'] == logo) & (output_sequences['file'] == file)].copy(),
-            sequence_length=15,  # TODO Currently the max length of animations + 1 for EOS
+            sequence_length=sequence_length_output,
             is_randomized=False,
             is_padding=True
         )
@@ -154,6 +160,16 @@ def _generate_output_sequence(animation: pd.DataFrame,
 
 
 def _add_padding(dataframe: pd.DataFrame, sequence_length: int) -> pd.DataFrame:
+    """
+    Add padding to a dataframe
+
+    Args:
+        dataframe: dataframe to add padding to
+        sequence_length: length of final sequences
+
+    Returns:
+
+    """
     if len(dataframe) < sequence_length:
         padding_rows = pd.DataFrame([[PADDING_VALUE] * len(dataframe.columns)] * (sequence_length - len(dataframe)),
                                     columns=dataframe.columns)
@@ -219,3 +235,8 @@ def get_bucket(input_length, output_length, buckets):
         break
 
     return bucket_name
+
+
+def warn_if_contains_NaN(dataset: torch.Tensor):
+    if torch.isnan(dataset).any():
+        print("There are NaN values in the dataset")
