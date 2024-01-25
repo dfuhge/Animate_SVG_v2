@@ -2,7 +2,6 @@ import math
 
 import torch
 import torch.nn as nn
-from torch.nn.modules.transformer import _generate_square_subsequent_mask, _get_seq_len
 
 import dataset_helper
 
@@ -102,7 +101,7 @@ def train_loop(model, opt, loss_function, dataloader, device):
         target_expected = target[:, 1:]  # trg is offset by one (excluding SOS token)
 
         # Get mask to mask out the next words
-        tgt_mask = _generate_square_subsequent_mask(_get_seq_len(target_input, batch_first=True)).to(device)
+        tgt_mask = get_tgt_mask(target_input.size(1)).to(device)
 
         # Standard training except we pass in y_input and tgt_mask
         prediction = model(source, target_input,
@@ -138,7 +137,7 @@ def validation_loop(model, loss_function, dataloader, device):
             target_expected = target[:, 1:]  # trg is offset by one (excluding SOS token)
 
             # Get mask to mask out the next words
-            tgt_mask = _generate_square_subsequent_mask(_get_seq_len(target_input, batch_first=True)).to(device)
+            tgt_mask = get_tgt_mask(target_input.size(1)).to(device)
 
             # Standard training except we pass in y_input and src_mask
             prediction = model(source, target_input,
