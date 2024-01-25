@@ -29,6 +29,7 @@ class CustomLoss1(nn.Module):
         super(CustomLoss1, self).__init__()
 
     def forward(self, inputs, targets):
+        print(inputs)
         typeLoss = nn.CrossEntropyLoss()
         ParameterLoss = nn.MSELoss()
 

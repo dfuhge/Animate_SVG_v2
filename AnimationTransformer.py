@@ -2,6 +2,9 @@ import math
 
 import torch
 import torch.nn as nn
+from torch.nn.modules.transformer import _generate_square_subsequent_mask, _get_seq_len
+
+import dataset_helper
 
 
 class AnimationTransformer(nn.Module):
@@ -31,9 +34,12 @@ class AnimationTransformer(nn.Module):
         )
         self.softmax = nn.Softmax(dim=2)  # Todo: Softmax over Categorical values
 
-    def forward(self, src, tgt, tgt_mask=None, src_pad_mask=None, tgt_pad_mask=None, batch_first=True):
+    def forward(self, src, tgt, tgt_mask=None, src_pad_mask=None, tgt_pad_mask=None):
         # Src size must be (batch_size, src sequence length)
         # Tgt size must be (batch_size, tgt sequence length)
+
+        # src = self.positional_encoder(src)
+        # tgt = self.positional_encoder(tgt)
 
         # Transformer blocks - Out size = (sequence length, batch_size, num_tokens)
         transformer_out = self.transformer(src, tgt, tgt_mask=tgt_mask, src_key_padding_mask=src_pad_mask,
@@ -41,11 +47,11 @@ class AnimationTransformer(nn.Module):
         # TODO: Add Softmax:
         out = transformer_out
 
-        return out
+        return transformer_out
 
 
 def get_tgt_mask(size) -> torch.tensor:
-    # Generates a square matrix where the each row allows one word more to be seen
+    # Generates a square matrix where each row allows one word more to be seen
     mask = torch.tril(torch.ones(size, size) == 1)  # Lower triangular matrix
     mask = mask.float()
     mask = mask.masked_fill(mask == 0, float('-inf'))  # Convert zeros to -inf
@@ -61,22 +67,20 @@ def get_tgt_mask(size) -> torch.tensor:
     return mask
 
 
-def create_pad_mask(self, matrix: torch.tensor, pad_token: int) -> torch.tensor:
-    # If matrix = [1,2,3,0,0,0] where pad_token=0, the result mask is
-    # [False, False, False, True, True, True]
-    mask = []
-    print(matrix)
+def create_pad_mask(matrix: torch.tensor) -> torch.tensor:
+    pad_masks = []
+
+    # Iterate over each sequence in the batch.
     for i in range(0, matrix.size(0)):
-        seq = []
+        sequence = []
+
+        # Iterate over each element in the sequence and append True if padding value
         for j in range(0, matrix.size(1)):
-            if matrix[i, j, 0] == pad_token:
-                seq.append(True)
-            else:
-                seq.append(False)
-        mask.append(seq)
-    result = torch.tensor(mask)
-    print(matrix, result, result.shape)
-    return result
+            sequence.append(matrix[i, j, 0] == dataset_helper.PADDING_VALUE)
+
+        pad_masks.append(sequence)
+
+    return torch.tensor(pad_masks)
 
 
 def train_loop(model, opt, loss_function, dataloader, device):
@@ -84,9 +88,13 @@ def train_loop(model, opt, loss_function, dataloader, device):
     total_loss = 0
 
     for batch in dataloader:
+        print("TRAIN BATCH")
         source, target = batch[0], batch[1]
-        # Move the tensor to a GPU (if available)
-        source, target = torch.tensor(source).to(device), torch.tensor(target).to(device)
+
+        if torch.isnan(source).any() or torch.isnan(target).any():
+            raise ValueError("Input data contains NaN values.")
+
+        source, target = source.to(device), target.to(device)
 
         # TODO doesn't work with padded sequences, does it? No batches then?
         # First index is all batch entries, second is
@@ -94,14 +102,17 @@ def train_loop(model, opt, loss_function, dataloader, device):
         target_expected = target[:, 1:]  # trg is offset by one (excluding SOS token)
 
         # Get mask to mask out the next words
-        sequence_length = target_input.size(1)
-        tgt_mask = get_tgt_mask(sequence_length).to(device)
+        tgt_mask = _generate_square_subsequent_mask(_get_seq_len(target_input, batch_first=True)).to(device)
 
         # Standard training except we pass in y_input and tgt_mask
-        prediction = model(source, target_input, tgt_mask)  # TODO adapt forward method: tgt_mask
+        prediction = model(source, target_input,
+                           tgt_mask=tgt_mask,
+                           src_pad_mask=create_pad_mask(source).to(device),
+                           tgt_pad_mask=create_pad_mask(target_input).to(device))
 
-        # Permute prediction to have batch size first again
-        #prediction = prediction.permute(1, 2, 0)
+        if torch.isnan(prediction).any():
+            print("Nan prediction detected")
+
         loss = loss_function(prediction, target_expected)
 
         opt.zero_grad()
@@ -119,21 +130,22 @@ def validation_loop(model, loss_function, dataloader, device):
 
     with torch.no_grad():
         for batch in dataloader:
+            print("VALIDATION BATCH")
             source, target = batch[0], batch[1]
-            source, target = torch.tensor(source, device=device), torch.tensor(target, device=device)
+            source, target = source.clone().detach().to(device), target.clone().detach().to(device)
 
             target_input = target[:, :-1]  # trg input is offset by one (SOS token and excluding EOS)
             target_expected = target[:, 1:]  # trg is offset by one (excluding SOS token)
 
             # Get mask to mask out the next words
-            sequence_length = target_input.size(1)
-            tgt_mask = model.get_tgt_mask(sequence_length).to(device)
+            tgt_mask = _generate_square_subsequent_mask(_get_seq_len(target_input, batch_first=True)).to(device)
 
             # Standard training except we pass in y_input and src_mask
-            prediction = model(source, target_input, tgt_mask)
+            prediction = model(source, target_input,
+                               tgt_mask=tgt_mask,
+                               src_pad_mask=create_pad_mask(source).to(device),
+                               tgt_pad_mask=create_pad_mask(target_input).to(device))
 
-            # Permute pred to have batch size first again
-            #prediction = prediction.permute(1, 2, 0)
             loss = loss_function(prediction, target_expected)
             total_loss += loss.detach().item()
 
@@ -159,3 +171,33 @@ def fit(model, optimizer, loss_function, train_dataloader, val_dataloader, epoch
         print()
 
     return train_loss_list, validation_loss_list
+
+
+class PositionalEncoding(nn.Module):
+    def __init__(self, dim_model, dropout_p, max_len):
+        super().__init__()
+        # Modified version from: https://pytorch.org/tutorials/beginner/transformer_tutorial.html
+        # max_len determines how far the position can have an effect on a token (window)
+
+        # Info
+        self.dropout = nn.Dropout(dropout_p)
+
+        # Encoding - From formula
+        pos_encoding = torch.zeros(max_len, dim_model)
+        positions_list = torch.arange(0, max_len, dtype=torch.float).view(-1, 1)  # 0, 1, 2, 3, 4, 5
+        division_term = torch.exp(
+            torch.arange(0, dim_model, 2).float() * (-math.log(10000.0)) / dim_model)  # 1000^(2i/dim_model)
+
+        # PE(pos, 2i) = sin(pos/1000^(2i/dim_model))
+        pos_encoding[:, 0::2] = torch.sin(positions_list * division_term)
+
+        # PE(pos, 2i + 1) = cos(pos/1000^(2i/dim_model))
+        pos_encoding[:, 1::2] = torch.cos(positions_list * division_term)
+
+        # Saving buffer (same as parameter without gradients needed)
+        pos_encoding = pos_encoding.unsqueeze(0).transpose(0, 1)
+        self.register_buffer("pos_encoding", pos_encoding)
+
+    def forward(self, token_embedding: torch.tensor) -> torch.tensor:
+        # Residual connection + pos encoding
+        return self.dropout(token_embedding + self.pos_encoding[:token_embedding.size(0), :])
