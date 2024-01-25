@@ -23,3 +23,16 @@ class CustomLoss(nn.CrossEntropyLoss):
         return functional.cross_entropy(input, target, weight=self.weight,
                                ignore_index=self.ignore_index, reduction=self.reduction,
                                label_smoothing=self.label_smoothing)
+
+class CustomLoss1(nn.Module):
+    def __init__(self):
+        super(CustomLoss1, self).__init__()
+
+    def forward(self, inputs, targets):
+        typeLoss = nn.CrossEntropyLoss()
+        ParameterLoss = nn.MSELoss()
+
+        loss = 0.5 * typeLoss(inputs[:, :, :6], targets[:, :, :6]) + 0.5 * ParameterLoss(inputs[:, :, 6:12],
+                                                                                         targets[:, :, 6:12])
+        # print(inputs[:,:,:6], inputs[:,:,:6].shape, targets[:,:,6:12], targets[:,:,6:12].shape)
+        return loss.mean()
