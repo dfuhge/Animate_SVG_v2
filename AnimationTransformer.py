@@ -32,6 +32,7 @@ class AnimationTransformer(nn.Module):
             batch_first=True
         )
         self.softmax = nn.Softmax(dim=2)  # Todo: Softmax over Categorical values
+        # self.out = nn.Linear(dim_model, dim_model)
 
     def forward(self, src, tgt, tgt_mask=None, src_pad_mask=None, tgt_pad_mask=None):
         # Src size must be (batch_size, src sequence length)
@@ -41,12 +42,12 @@ class AnimationTransformer(nn.Module):
         # tgt = self.positional_encoder(tgt)
 
         # Transformer blocks - Out size = (sequence length, batch_size, num_tokens)
-        transformer_out = self.transformer(src, tgt, tgt_mask=tgt_mask, src_key_padding_mask=src_pad_mask,
-                                           tgt_key_padding_mask=tgt_pad_mask)
+        out = self.transformer(src, tgt, tgt_mask=tgt_mask, src_key_padding_mask=src_pad_mask,
+                               tgt_key_padding_mask=tgt_pad_mask)
         # TODO: Add Softmax:
-        out = transformer_out
+        # out = self.out(out)
 
-        return transformer_out
+        return out
 
 
 def get_tgt_mask(size) -> torch.tensor:
