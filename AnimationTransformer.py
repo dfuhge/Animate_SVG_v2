@@ -88,7 +88,6 @@ def train_loop(model, opt, loss_function, dataloader, device):
     total_loss = 0
 
     for batch in dataloader:
-        print("TRAIN BATCH")
         source, target = batch[0], batch[1]
 
         if torch.isnan(source).any() or torch.isnan(target).any():
@@ -96,7 +95,6 @@ def train_loop(model, opt, loss_function, dataloader, device):
 
         source, target = source.to(device), target.to(device)
 
-        # TODO doesn't work with padded sequences, does it? No batches then?
         # First index is all batch entries, second is
         target_input = target[:, :-1]  # trg input is offset by one (SOS token and excluding EOS)
         target_expected = target[:, 1:]  # trg is offset by one (excluding SOS token)
@@ -130,7 +128,6 @@ def validation_loop(model, loss_function, dataloader, device):
 
     with torch.no_grad():
         for batch in dataloader:
-            print("VALIDATION BATCH")
             source, target = batch[0], batch[1]
             source, target = source.clone().detach().to(device), target.clone().detach().to(device)
 

@@ -3,7 +3,7 @@ import pandas as pd
 import torch
 
 # SEQUENCE GENERATION
-PADDING_VALUE = float('-inf')
+PADDING_VALUE = float('-100')
 
 
 def generate_dataset(dataframe_index: pd.DataFrame,
