@@ -170,6 +170,46 @@ def fit(model, optimizer, loss_function, train_dataloader, val_dataloader, epoch
     return train_loss_list, validation_loss_list
 
 
+def predict(model, source_sequence, sos_token: torch.Tensor, device, max_length=32):
+    model.eval()
+
+    y_input = torch.tensor([sos_token], dtype=torch.long, device=device)
+
+    i = 0
+    while i < max_length:
+        # Get source mask
+        pred = model(source_sequence, y_input)
+
+        # todo determine correct path
+        pred = pred[:, i - 1:i, :]
+
+        sm = nn.Softmax(dim=2)
+        next_item = sm(pred[:, :, :6])
+        # print(next_item)
+        animation_type = torch.argmax(next_item[:, :, :6], dim=2).item()
+
+        for i in range(0, 6):
+            if i == animation_type:
+                pred[:, :, i] = 1
+            else:
+                pred[:, :, i] = 0
+
+        for i in range(12, 256):
+            pred[:, :, i] = 0
+
+        # print(pred)
+
+        # print(source_sequence.shape, y_input.shape, next_item.shape, pred.shape)
+        # Concatenate previous input with predicted best word
+        y_input = torch.cat((y_input, pred), dim=1)
+
+        # Stop if model predicts end of sentence
+        if next_item:
+            print("END OF SEQUENCE")
+            break
+
+    return y_input
+
 class PositionalEncoding(nn.Module):
     def __init__(self, dim_model, dropout_p, max_len):
         super().__init__()
