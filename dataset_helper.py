@@ -1,9 +1,38 @@
+from typing import Tuple, Any
+
 import numpy as np
 import pandas as pd
 import torch
 
 # SEQUENCE GENERATION
 PADDING_VALUE = float('-100')
+
+ANIMATION_PARAMETER_INDICES = {
+    0: [],  # EOS
+    1: [0, 1, 6],  # translate
+    2: [2, 6],  # scale
+    3: [3, 6],
+    4: [4, 5, 6],
+    5: [6],
+    6: [6],
+}
+
+
+def unpack_embedding(embedding: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """
+    Args:
+        embedding: embedding of dimension 270
+
+    Returns: tuple of tensors: deep-svg embedding, type of prediction, animation parameters
+
+    """
+    #if embedding.dim() != 270:
+    #    raise ValueError('Dimension of 270 required.')
+
+    deep_svg = embedding[0, : -14]
+    types = embedding[0, -14: -7]
+    parameters = embedding[0, -7:]
+    return deep_svg, types, parameters
 
 
 def generate_dataset(dataframe_index: pd.DataFrame,

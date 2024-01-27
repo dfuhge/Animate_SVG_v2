@@ -173,40 +173,52 @@ def fit(model, optimizer, loss_function, train_dataloader, val_dataloader, epoch
 def predict(model, source_sequence, sos_token: torch.Tensor, device, max_length=32):
     model.eval()
 
-    y_input = torch.tensor([sos_token], dtype=torch.long, device=device)
+    source_sequence = source_sequence.float().to(device)
+    y_input = torch.unsqueeze(sos_token, 0).float().to(device)
 
     i = 0
     while i < max_length:
         # Get source mask
-        pred = model(source_sequence, y_input)
+        prediction = model(source_sequence, y_input,
+                           src_pad_mask=create_pad_mask(source_sequence.unsqueeze(0))[0].to(device))
 
-        # todo determine correct path
-        pred = pred[:, i - 1:i, :]
+        pred_deep_svg, pred_type, pred_parameters = dataset_helper.unpack_embedding(prediction)
 
-        sm = nn.Softmax(dim=2)
-        next_item = sm(pred[:, :, :6])
-        # print(next_item)
-        animation_type = torch.argmax(next_item[:, :, :6], dim=2).item()
+        # === TYPE ===
+        # Apply Softmax
+        type_softmax = torch.softmax(pred_type, dim=0)
+        animation_type = torch.argmax(type_softmax, dim=0)
 
-        for i in range(0, 6):
-            if i == animation_type:
-                pred[:, :, i] = 1
-            else:
-                pred[:, :, i] = 0
+        # Break if EOS is most likely
+        if animation_type == 0:
+            print("END OF ANIMATION")
+            y_input = torch.cat((y_input, sos_token.unsqueeze(0).to(device)), dim=0)
+            return y_input
 
-        for i in range(12, 256):
-            pred[:, :, i] = 0
+        pred_type = torch.zeros(7)
+        pred_type[animation_type] = 1
 
-        # print(pred)
+        # === DEEP SVG ===
+        # Find the closest path
+        distances = [torch.norm(pred_deep_svg - embedding[:-14]) for embedding in source_sequence]
+        closest_index = distances.index(min(distances))
+        closest_token = source_sequence[closest_index]
 
-        # print(source_sequence.shape, y_input.shape, next_item.shape, pred.shape)
-        # Concatenate previous input with predicted best word
-        y_input = torch.cat((y_input, pred), dim=1)
+        # === PARAMETERS ===
+        # overwrite unused parameters
+        for j in range(len(pred_parameters)):
+            if j in dataset_helper.ANIMATION_PARAMETER_INDICES[int(animation_type)]:
+                continue
+            pred_parameters[j] = -1
 
-        # Stop if model predicts end of sentence
-        if next_item:
-            print("END OF SEQUENCE")
-            break
+        # === SEQUENCE ===
+        y_new = torch.concat([closest_token[:-14], pred_type.to(device), pred_parameters], dim=0)
+        y_input = torch.cat((y_input, y_new.unsqueeze(0)), dim=0)
+
+        # === INFO PRINT ===
+        print(f"{int(y_input.size(0))}: Path {closest_index} ({round(float(distances[closest_index]), 3)}) "
+              f"got animation {animation_type} ({round(float(type_softmax[animation_type]), 3)}%) "
+              f"with parameters {[round(num, 2) for num in pred_parameters.tolist()]}")
 
     return y_input
 

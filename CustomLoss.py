@@ -2,6 +2,8 @@ import torch
 from torch import nn, Tensor
 from torch.nn import functional
 
+from dataset_helper import unpack_embedding
+
 
 class CustomLoss(nn.CrossEntropyLoss):
     ignore_index: int
@@ -29,9 +31,11 @@ class CustomLoss1(nn.Module):
         super(CustomLoss1, self).__init__()
 
     def forward(self, inputs, targets):
-        print(inputs)
         typeLoss = nn.CrossEntropyLoss()
         ParameterLoss = nn.MSELoss()
+
+        input_deep_svg, input_type, input_parameters = unpack_embedding(inputs)
+        target_deep_svg, target_type, target_parameters = unpack_embedding(targets)
 
         loss = 0.5 * typeLoss(inputs[:, :, :6], targets[:, :, :6]) + 0.5 * ParameterLoss(inputs[:, :, 6:12],
                                                                                          targets[:, :, 6:12])
