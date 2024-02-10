@@ -51,7 +51,7 @@ for website in ALPH_WEBSITES:
         i += 1
         driver.get(website + '/' + str(i))
 
-with open("src/data_scraping/results.txt", "w") as file:
+with open("src/data_scraper/results.txt", "w") as file:
     for link in svg_links:
         file.write(link + "\n")
     file.close()

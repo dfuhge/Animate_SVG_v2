@@ -8,6 +8,8 @@ from html.parser import HTMLParser
 import requests
 import warnings
 warnings.filterwarnings("ignore")
+import sys
+sys.path.append(os.getcwd())
 
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
@@ -19,7 +21,7 @@ from selenium.common.exceptions import StaleElementReferenceException
 # Seed random
 random.seed(0)
 
-DATASET_ROOT = "src/data_scraping/results"
+DATASET_ROOT = "data/raw_dataset"
 logo_id = 0
 
 # Initialize Main Firefox Driver
@@ -40,7 +42,7 @@ def download_image_from_link(link):
         logo_id += 1
 
 def download_images(img_numbers):
-    with open('src/data_scraping/results.txt') as f:
+    with open('src/data_scraper/results.txt') as f:
         i = 0
         for line in f:
             if i in img_numbers:

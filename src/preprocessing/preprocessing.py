@@ -141,3 +141,6 @@ def compute_embedding(path: str, model_path: str, save: str = None) -> pd.DataFr
         output.close()
     print('Embedding computed')
     return data
+
+
+compute_embedding_folder('data/raw_dataset', 'src/preprocessing/deepsvg/deepsvg_models/deepSVG_hierarchical_ordered.pth.tar', 'data/embedding')
