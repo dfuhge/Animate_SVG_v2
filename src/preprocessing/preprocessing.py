@@ -46,11 +46,13 @@ def compute_embedding(path: str, model_path: str, save: str = None) -> pd.DataFr
     svg.normalize() # Using DeepSVG normalize instead of expanding viewbox - TODO check is this equal?
     svg_str = svg.to_str()
     
-    # Assign animation id to every path
+    # Assign animation id to every path - TODO this changes the original logo!
     document = minidom.parseString(svg_str)
     paths = document.getElementsByTagName('path')
     for i in range(len(paths)):
         paths[i].setAttribute('animation_id', str(i))
+    with open(path, 'wb') as svg_file:
+        svg_file.write(document.toxml(encoding='iso-8859-1'))
 
     # Decompose SVGs
 
