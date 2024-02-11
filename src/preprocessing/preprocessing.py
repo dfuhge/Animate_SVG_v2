@@ -21,9 +21,14 @@ from deepsvg.deepsvg_dataloader import svg_dataset
 def compute_embedding_folder(folder_path: str, model_path: str, save: str = None) -> pd.DataFrame:
     data_list = []
     for file in os.listdir(folder_path):
-        embedding = compute_embedding(os.path.join(folder_path, file), model_path)
-        embedding['filename'] = file
-        data_list.append(embedding)
+        print('File: ' + file)
+        try:
+            embedding = compute_embedding(os.path.join(folder_path, file), model_path)
+            embedding['filename'] = file
+            data_list.append(embedding)
+        except:
+            print('Embedding failed')
+    print('Concatenating')
     data = pd.concat(data_list)
     if not save == None:
         output = open(os.path.join(save, 'svg_embedding.pkl'), 'wb')
@@ -76,9 +81,9 @@ def compute_embedding(path: str, model_path: str, save: str = None) -> pd.DataFr
         # Canonicalize
         current_svg.canonicalize() # Applies DeepSVG canonicalize; previously custom methods were used
         decomposed_svgs[id] = current_svg.to_str()
-        if not os.path.exists('svgdatadir'):
-            os.mkdir('svgdatadir')
-        with open(('svgdatadir/path_' + str(id)) + '.svg', 'w') as svg_file:
+        if not os.path.exists('data/temp_svg'):
+            os.mkdir('data/temp_svg')
+        with open(('data/temp_svg/path_' + str(id)) + '.svg', 'w') as svg_file:
             svg_file.write(decomposed_svgs[id])
 
         # Collect metadata
@@ -102,7 +107,9 @@ def compute_embedding(path: str, model_path: str, save: str = None) -> pd.DataFr
             'start_pos': start_pos
         }
     metadata = pd.DataFrame(meta.values())
-    metadata.to_csv('metadata.csv', index=False)
+    if not os.path.exists('data/metadata'):
+        os.mkdir('data/metadata')
+    metadata.to_csv('data/metadata/metadata.csv', index=False)
     # Load pretrained DeepSVG model
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     cfg = config_hierarchical_ordered.Config()
@@ -110,10 +117,10 @@ def compute_embedding(path: str, model_path: str, save: str = None) -> pd.DataFr
     train_utils.load_model(model_path, model)
     model.eval()
     # Load dataset
-    cfg.data_dir = 'svgdatadir/'
-    cfg.meta_filepath = 'metadata.csv'
+    cfg.data_dir = 'data/temp_svg/'
+    cfg.meta_filepath = 'data/metadata/metadata.csv'
     dataset = svg_dataset.load_dataset(cfg)
-    svg_files = glob.glob('svgdatadir/*.svg')
+    svg_files = glob.glob('data/temp_svg/*.svg')
     svg_list = []
     for svg_file in svg_files:
         id = svg_file.split('_')[1].split('.')[0]
