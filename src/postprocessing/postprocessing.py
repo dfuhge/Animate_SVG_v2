@@ -24,16 +24,28 @@ def animate_logo(model_output: pd.DataFrame, logo_path: str):
                 break
             current_path = paths[i]
         else:
-            # Find out animation type
+            # Find out animation type and set animation attributes
+            output = row['model_output']
             try:
-                index = row['model_output'].index(1) # TODO check if int or str
+                index = output.index(1) # TODO check if int or str
             except:
                 print('no valid model output')
                 continue
+            animation_dict = {}
             if index == 0:
                 print('animation: translate')
+                animation_dict['attributeName'] = 'transform'
+                animation_dict['attributeType'] = 'XML'
+                animation_dict['type'] = 'translate'
+                animation_dict['from'] = f'{output[8]} {output[9]}'
+                animation_dict['to'] = '0 0'
             elif index == 1:
                 print('animation: scale')
+                animation_dict['attributeName'] = 'transform'
+                animation_dict['attributeType'] = 'XML'
+                animation_dict['type'] = 'scale'
+                animation_dict['from'] = f'{output[10]} {output[11]}'
+                animation_dict['to'] = '0 0'
             elif index == 2:
                 print('animation: rotate')
             elif index == 3:
@@ -46,4 +58,9 @@ def animate_logo(model_output: pd.DataFrame, logo_path: str):
                 print('no valid model output')
                 continue
 
+            animation_dict['begin'] = str(output[6])
+            animation_dict['dur'] = str(output[7])
+            animation_dict['fill'] = 'freeze'
+
+            # Create element and insert to document
 
