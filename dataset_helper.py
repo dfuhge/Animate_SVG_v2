@@ -18,20 +18,37 @@ ANIMATION_PARAMETER_INDICES = {
 }
 
 
-def unpack_embedding(embedding: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+def unpack_embedding(embedding: torch.Tensor, dim=0, device="cpu") -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Args:
+        device: cpu / gpu
+        dim: dimension where the embedding is positioned
         embedding: embedding of dimension 270
 
     Returns: tuple of tensors: deep-svg embedding, type of prediction, animation parameters
 
     """
-    #if embedding.dim() != 270:
-    #    raise ValueError('Dimension of 270 required.')
+    if embedding.shape[dim] != 270:
+        print(embedding.shape)
+        raise ValueError('Dimension of 270 required.')
 
-    deep_svg = embedding[0, : -14]
-    types = embedding[0, -14: -7]
-    parameters = embedding[0, -7:]
+    if dim == 0:
+        deep_svg = embedding[: -14].to(device)
+        types = embedding[-14: -7].to(device)
+        parameters = embedding[-7:].to(device)
+
+    elif dim == 1:
+        deep_svg = embedding[:, : -14].to(device)
+        types = embedding[:, -14: -7].to(device)
+        parameters = embedding[:, -7:].to(device)
+
+    elif dim == 2:
+        deep_svg = embedding[:, :, : -14].to(device)
+        types = embedding[:, :, -14: -7].to(device)
+        parameters = embedding[:, :, -7:].to(device)
+
+    else:
+        raise ValueError('Dimension > 2 not possible.')
     return deep_svg, types, parameters
 
 
