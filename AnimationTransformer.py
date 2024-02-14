@@ -164,7 +164,8 @@ def predict(model, source_sequence, sos_token: torch.Tensor, device, max_length=
         prediction = model(source_sequence, y_input,
                            src_key_padding_mask=create_pad_mask(source_sequence.unsqueeze(0))[0].to(device))
 
-        pred_deep_svg, pred_type, pred_parameters = dataset_helper.unpack_embedding(prediction, dim=1)
+        print(prediction)
+        pred_deep_svg, pred_type, pred_parameters = dataset_helper.unpack_embedding(prediction.squeeze(0), dim=0)
 
         # === TYPE ===
         # Apply Softmax
@@ -172,7 +173,6 @@ def predict(model, source_sequence, sos_token: torch.Tensor, device, max_length=
         animation_type = torch.argmax(type_softmax, dim=0)
 
         # Break if EOS is most likely
-        print(animation_type)
         if animation_type == 0:
             print("END OF ANIMATION")
             y_input = torch.cat((y_input, sos_token.unsqueeze(0).to(device)), dim=0)
