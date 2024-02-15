@@ -303,6 +303,7 @@ def _insert_animations(animations: list, path: str, target_path: str):
         'rect') + document.getElementsByTagName('text')
     # Create statement
     for animation in animations:
+        
         # Search for element
         current_element = None
         for element in elements:
@@ -317,14 +318,41 @@ def _insert_animations(animations: list, path: str, target_path: str):
         elif animation['animation_type'] == 'animate':
             animate_statement = _create_animate_statement(animation)
             current_element.appendChild(document.createElement(animate_statement))
-        elif animation['animation_type'] == 'filter':
-            filter_statement, fe_statement, animate_statement = _create_animate_filter_statement(animation)
-            # TODO insert filter statement
+        elif animation['animation_type'] == 'animate_filter':
+            filter_element, fe_element, animate_statement = _create_animate_filter_statement(animation, document)
+            defs = document.getElementsByTagName('defs')
+            current_defs = None
+            # Check if defs tag exists; create otherwise
+            if len(defs) == 0:
+                svg = document.getElementsByTagName('svg')[0]
+                current_defs = document.createElement('defs')
+                svg.appendChild(current_defs)
+            else:
+                current_defs = defs[0]
+            # Check if filter to be appended
+            if filter_element != None:
+                # Create filter
+                print('append filter')
+                current_defs.appendChild(filter_element)
+            # Check if FE to be created
+            if fe_element != None:
+                print('create fe statement')
+                # Check if filter set; else search
+                if filter_element == None:
+                    # Search for filter
+                    id = 'filter_' + str(animation['animation_id'])
+                    for f in document.getElementsByTagName('filter'):
+                        if f.getAttribute('id') == id:
+                            filter_element = f
+                # Create FE
+                filter_element.appendChild(fe_element)
+            current_defs.appendChild(document.createElement(animate_statement))
+            current_element.setAttribute('filter', f'url(#filter_{animation["animation_id"]})')
 
     # Save XML to target path
     with open(target_path, 'wb') as f:
         f.write(document.toprettyxml(encoding="iso-8859-1"))
-    
+        
 
 
 def _create_animate_transform_statement(animation_dict: dict):
@@ -357,32 +385,37 @@ def _create_animate_statement(animation_dict: dict):
 def _create_animate_filter_statement(animation_dict: dict, document: minidom.Document):
     global filter_id
     filter_id += 1
-    filter_statement = None
-    fe_statement = None
+    filter_element = None
+    fe_element = None
     animate_statement = None
     if animation_dict['type'] == 'blur':
         # Check if filter already exists
-        filters = document.getElementsByTagName('path')
+        filters = document.getElementsByTagName('filter')
         current_filter = None
         current_fe = None
         for f in filters:
+            #print(f.getAttribute('id') == f'filter_{str(animation_dict["animation_id"])}')
             if f.getAttribute('id') == f'filter_{str(animation_dict["animation_id"])}':
                 current_filter = f
-                fe_elements = document.getElementsByTagName('feGaussianBlur')
-                for fe in fe_elements:
-                    if fe.getAttribute('id') == f'filter_blur_{str(animation_dict["animation_id"])}':
-                        current_fe = fe
+        fe_elements = document.getElementsByTagName('feGaussianBlur')
+        for fe in fe_elements:
+            if fe.getAttribute('id') == f'filter_blur_{str(animation_dict["animation_id"])}':
+                current_fe = fe
         if current_filter == None:
-            filter_statement = f'filter id="filter_{str(animation_dict["animation_id"])}" '
+            filter_element = document.createElement('filter')
+            filter_element.setAttribute('id', f'filter_{str(animation_dict["animation_id"])}')
         if current_fe == None:
-            fe_statement = f'feGaussianBlur id="filter_blur_{str(animation_dict["animation_id"])}" stdDeviation="0"'
-        animate_statement = f'animate xLink:href = "filter_blur_{str(animation_dict["animation_id"])}" ' \
+            fe_element = document.createElement('feGaussianBlur')
+            fe_element.setAttribute('id', f'filter_blur_{str(animation_dict["animation_id"])}')
+            fe_element.setAttribute('stdDeviation', '0')
+        animate_statement = f'animate href="#filter_blur_{str(animation_dict["animation_id"])}" ' \
+                f'attributeName="stdDeviation" ' \
                 f'begin="{str(animation_dict["begin"])}" ' \
                 f'dur="{str(animation_dict["dur"])}" ' \
                 f'from="{str(animation_dict["from"])}" ' \
                 f'to="{str(animation_dict["to"])}" ' \
                 f'fill="{str(animation_dict["fill"])}"'
-    return filter_statement, fe_statement, animate_statement
+    return filter_element, fe_element, animate_statement
 
 
 
@@ -398,11 +431,11 @@ def randomly_animate_logo(number_of_animations: int, previously_generated: pd.Da
 model_output = [
     {
         'animation_id': 1,
-        'model_output': [0, 0, 0, 0, 1, 0, 0, 0, 1, 10, 3, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        'model_output': [0, 0, 0, 0, 0, 0, 0, 1, 1, 10, 3, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10]
     },
     {
         'animation_id': 1,
-        'model_output': [0, 0, 0, 0, 0, 0, 1, 0, 5, 3, 4, 5, 2, 1, 2, 3, 4, 5, 6, 7, 8, 0]
+        'model_output': [0, 0, 0, 0, 0, 0, 0, 1, 5, 3, 4, 5, 2, 1, 2, 3, 4, 5, 6, 7, 1000, 20]
     }
 ]
 model_output = pd.DataFrame(model_output)
