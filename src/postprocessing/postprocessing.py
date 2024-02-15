@@ -5,13 +5,13 @@ from xml.dom import minidom
 from collections import defaultdict
 
 sys.path.append(os.getcwd())
-from get_svg_size_pos import get_svg_size
+from get_svg_size_pos import get_svg_bbox, get_path_bbox
 from get_style_attributes import get_style_attributes_path
 
 filter_id = 0
 
 def animate_logo(model_output: pd.DataFrame, logo_path: str):
-    width, height = get_svg_size(logo_path)
+    logo_xmin, logo_xmax, logo_ymin, logo_ymax = get_svg_bbox(logo_path)
     # ---- Normalize model output ----
     animations_by_id = defaultdict(list)
     for row in model_output.iterrows():
@@ -21,6 +21,11 @@ def animate_logo(model_output: pd.DataFrame, logo_path: str):
         animations_by_id[animation_id].append(output)
     total_animations = []
     for animation_id in animations_by_id.keys():
+        path_xmin, path_xmax, path_ymin, path_ymax = get_path_bbox(logo_path, animation_id)
+        xmin = path_xmin - logo_xmin
+        xmax = logo_xmax - path_xmax
+        ymin = path_ymin - logo_ymin
+        ymax = logo_ymax - path_ymax
         # Structure animations by type (check first 7 parameters)
         animations_by_type = defaultdict(list)
         for animation in animations_by_id[animation_id]:
@@ -37,7 +42,7 @@ def animate_logo(model_output: pd.DataFrame, logo_path: str):
             # Set up list of animations for later distribution
             current_animations = []
             # Sort animations by begin
-            animations_by_type[animation_type].sort(key=lambda l : l[8]) # TODO Begin is index 7???
+            animations_by_type[animation_type].sort(key=lambda l : l[8]) # TODO Begin is index 8???
             # For every animation, check consistency of begin and duration, then set parameters
             for i in range(len(animations_by_type[animation_type])):
                 # Check if begin is equal to next animation's begin - in this case, set second begin to average of first and third animation
@@ -79,13 +84,31 @@ def animate_logo(model_output: pd.DataFrame, logo_path: str):
                         # animation endpoint is final position of object
                         to_x = 0
                         to_y = 0
+                    # Check if parameters are within boundary
+                    if from_x < xmin:
+                        from_x = xmin
+                    elif from_x > xmax:
+                        from_x = xmax
+                    if from_y < ymin:
+                        from_y = ymin
+                    elif from_y > ymax:
+                        from_y = ymax
+                    if to_x < xmin:
+                        to_x = xmin
+                    elif to_x > xmax:
+                        to_x = xmax
+                    if to_y < ymin:
+                        to_y = ymin
+                    elif to_y > ymax:
+                        to_y = ymax 
+                    # Append animation to list
                     current_animations.append(_animation_translate(animation_id, begin, dur, from_x, from_y, to_x, to_y))
                 elif animation_type == 1:
                     # animation: scale
                     from_f = animations_by_type[animation_type][i][12]
-                    # Check if there is a next translate animation
+                    # Check if there is a next scale animation
                     if i < len(animations_by_type[animation_type]) - 1:
-                        # animation endpoint is next translate animation's starting point
+                        # animation endpoint is next scale animation's starting point
                         to_f = animations_by_type[animation_type][i+1][12]
                     else:
                         # animation endpoint is final position of object
@@ -112,6 +135,15 @@ def animate_logo(model_output: pd.DataFrame, logo_path: str):
                     else:
                         # animation endpoint is final position of object
                         to_x = 1
+                    # Check if parameters are within boundary
+                    if from_x < xmin:
+                        from_x = xmin
+                    elif from_x > xmax:
+                        from_x = xmax
+                    if to_x < xmin:
+                        to_x = xmin
+                    elif to_x > xmax:
+                        to_x = xmax
                     current_animations.append(_animation_skewX(animation_id, begin, dur, from_x, to_x))
                 elif animation_type == 4:
                     # animation: skewY
@@ -123,6 +155,15 @@ def animate_logo(model_output: pd.DataFrame, logo_path: str):
                     else:
                         # animation endpoint is final position of object
                         to_y = 1
+                    # Check if parameters are within boundary
+                    if from_y < ymin:
+                        from_y = ymin
+                    elif from_y > ymax:
+                        from_y = ymax
+                    if to_y < ymin:
+                        to_y = ymin
+                    elif to_y > ymax:
+                        to_y = ymax 
                     current_animations.append(_animation_skewY(animation_id, begin, dur, from_y, to_y))
                 elif animation_type == 5:
                     # animation: fill
@@ -365,7 +406,8 @@ def _create_animate_transform_statement(animation_dict: dict):
                 f'dur="{str(animation_dict["dur"])}" ' \
                 f'from="{str(animation_dict["from"])}" ' \
                 f'to="{str(animation_dict["to"])}" ' \
-                f'fill="{str(animation_dict["fill"])}"'
+                f'fill="{str(animation_dict["fill"])}"' \
+                'additive="sum"'
 
     return animation
 
@@ -378,7 +420,8 @@ def _create_animate_statement(animation_dict: dict):
                 f'dur="{str(animation_dict["dur"])}" ' \
                 f'from="{str(animation_dict["from"])}" ' \
                 f'to="{str(animation_dict["to"])}" ' \
-                f'fill="{str(animation_dict["fill"])}"'
+                f'fill="{str(animation_dict["fill"])}"'\
+                'additive="sum"'
 
     return animation
 
@@ -414,7 +457,8 @@ def _create_animate_filter_statement(animation_dict: dict, document: minidom.Doc
                 f'dur="{str(animation_dict["dur"])}" ' \
                 f'from="{str(animation_dict["from"])}" ' \
                 f'to="{str(animation_dict["to"])}" ' \
-                f'fill="{str(animation_dict["fill"])}"'
+                f'fill="{str(animation_dict["fill"])}"'\
+                'additive="sum"'
     return filter_element, fe_element, animate_statement
 
 
