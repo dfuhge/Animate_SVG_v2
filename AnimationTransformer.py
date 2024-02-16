@@ -15,6 +15,7 @@ class AnimationTransformer(nn.Module):
             num_encoder_layers,
             num_decoder_layers,
             dropout_p,
+            pos_encoder_max_len
     ):
         super().__init__()
 
@@ -22,7 +23,10 @@ class AnimationTransformer(nn.Module):
         self.dim_model = dim_model
 
         # TODO: Currently left out, as input sequence shuffled. Later check if use is beneficial.
-        # self.positional_encoder = PositionalEncoding(dim_model=dim_model, dropout_p=dropout_p, max_len=5000)
+        self.positional_encoder = PositionalEncoding(
+            dim_model=dim_model,
+            dropout_p=dropout_p,
+            max_len=pos_encoder_max_len)
 
         self.transformer = nn.Transformer(
             d_model=dim_model,
