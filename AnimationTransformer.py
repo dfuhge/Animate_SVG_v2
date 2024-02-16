@@ -1,4 +1,5 @@
 import math
+import time
 
 import torch
 import torch.nn as nn
@@ -106,6 +107,8 @@ def train_loop(model, opt, loss_function, dataloader, device):
     model.train()
     total_loss = 0
 
+    t0 = time.time()
+    i = 1
     for batch in dataloader:
         loss = _transformer_call_in_loops(model, batch, device, loss_function)
 
@@ -114,6 +117,14 @@ def train_loop(model, opt, loss_function, dataloader, device):
         opt.step()
 
         total_loss += loss.detach().item()
+
+        if i == 1 or i % 10 == 0:
+            elapsed_time = time.time() - t0
+            total_expected = elapsed_time / i * len(dataloader)
+            print(f"{i}: Time per Batch {int(elapsed_time / i)}s | "
+                  f"Total expected {int(total_expected / 60)} min | "
+                  f"Remaining {int((total_expected - elapsed_time) / 60)} min ")
+        i += 1
 
     return total_loss / len(dataloader)
 
