@@ -54,7 +54,8 @@ def unpack_embedding(embedding: torch.Tensor, dim=0, device="cpu") -> tuple[torc
 
 
 def generate_dataset(dataframe_index: pd.DataFrame,
-                     input_sequences_dict: dict,
+                     input_sequences_dict_used: dict,
+                     input_sequences_dict_unused: dict,
                      output_sequences: pd.DataFrame,
                      logos_list: dict,
                      sequence_length_input: int,
@@ -64,8 +65,9 @@ def generate_dataset(dataframe_index: pd.DataFrame,
     Builds the dataset and returns it
 
     Args:
+        input_sequences_dict_used: dictionary containing input sequences per logo
+        input_sequences_dict_unused: dictionary containing all unused paths
         dataframe_index: dataframe containing the relevant indexes for the dataframes
-        input_sequences_dict: dictionary containing input sequences per logo
         output_sequences: dataframe containing animations
         logos_list: dictionary in train/test split containing list for logo ids
         sequence_length_input: length of input sequence for padding
@@ -93,10 +95,11 @@ def generate_dataset(dataframe_index: pd.DataFrame,
 
         for j in range(oversample):
             input_tensor = _generate_input_sequence(
-                input_sequences_dict[logo].copy(),
+                input_sequences_dict_used[logo].copy(),
+                input_sequences_dict_unused[logo].copy(),
                 null_features=14,  # TODO depends on architecture later
                 sequence_length=sequence_length_input,
-                is_randomized=True,
+                # is_randomized=True, always now
                 is_padding=True
             )
 
@@ -129,32 +132,40 @@ def generate_dataset(dataframe_index: pd.DataFrame,
     return dataset
 
 
-def _generate_input_sequence(logo_embeddings: pd.DataFrame,
+def _generate_input_sequence(logo_embeddings_used: pd.DataFrame,
+                             logo_embeddings_unused: pd.DataFrame,
                              null_features: int,
                              sequence_length: int,
-                             is_randomized: bool,
                              is_padding: bool) -> torch.Tensor:
     """
     Build a torch tensor for the transformer input sequences.
     Includes
-    - Randomization (optional)
+    - Ensuring all used embeddings are included
+    - Filling the remainder with unused embeddings up to sequence length
     - Generation of padding
 
     Args:
         logo_embeddings (pd.DataFrame): DataFrame containing logo embeddings.
         null_features (int): Number of null features to add to each embedding.
         sequence_length (int): Target length for padding sequences.
-        is_randomized: shuffle order of paths
         is_padding: if true, function adds padding
 
     Returns:
         torch.Tensor: Tensor representing the input sequences.
     """
-    logo_embeddings.drop(columns=['filename', 'animation_id'], inplace=True)
+    logo_embeddings_used.drop(columns=['filename', 'animation_id'], inplace=True)
+    logo_embeddings_unused.drop(columns=['filename', 'animation_id'], inplace=True)
+
+    # Combine used and unused. Fill used with random unused samples
+    logo_embeddings = logo_embeddings_unused
+    remaining_slots = sequence_length - len(logo_embeddings)
+    if remaining_slots > 0:
+        sample_size = min(len(logo_embeddings_unused), remaining_slots)
+        additional_embeddings = logo_embeddings_unused.sample(n=sample_size, replace=False)
+        logo_embeddings = pd.concat([logo_embeddings, additional_embeddings], ignore_index=True)
 
     # Randomization
-    if is_randomized:
-        logo_embeddings = logo_embeddings.sample(frac=1).reset_index(drop=True)
+    logo_embeddings = logo_embeddings.sample(frac=1).reset_index(drop=True)
 
     # Null Features
     if null_features > 0:
