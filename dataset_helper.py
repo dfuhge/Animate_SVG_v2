@@ -1,3 +1,4 @@
+import random
 from typing import Tuple, Any
 
 import numpy as np
@@ -87,31 +88,38 @@ def generate_dataset(dataframe_index: pd.DataFrame,
     for i, logo_info in dataframe_index.iterrows():
         logo = logo_info['filename']  # e.g. logo_1
         file = logo_info['file']  # e.g. logo_1_animation_2
-        print(f"Processing {logo} with {file}")
+        oversample = logo_info['repeat']
+        print(f"Processing {logo} with {file}: ")
 
-        input_tensor = _generate_input_sequence(input_sequences_dict[logo].copy(),
-                                                null_features=14,  # TODO depends on architecture later
-                                                sequence_length=sequence_length_input,
-                                                is_randomized=True,
-                                                is_padding=True)
+        for j in range(oversample):
+            input_tensor = _generate_input_sequence(
+                input_sequences_dict[logo].copy(),
+                null_features=14,  # TODO depends on architecture later
+                sequence_length=sequence_length_input,
+                is_randomized=True,
+                is_padding=True
+            )
 
-        output_tensor = _generate_output_sequence(
-            output_sequences[(output_sequences['filename'] == logo) & (output_sequences['file'] == file)].copy(),
-            sequence_length=sequence_length_output,
-            is_randomized=False,
-            is_padding=True
-        )
-        # append to lists
-        if logo in logos_list["train"]:
-            dataset["train"]["input"].append(input_tensor)
-            dataset["train"]["output"].append(output_tensor)
+            output_tensor = _generate_output_sequence(
+                output_sequences[(output_sequences['filename'] == logo) & (output_sequences['file'] == file)].copy(),
+                sequence_length=sequence_length_output,
+                is_randomized=False,
+                is_padding=True
+            )
+            # append to lists
+            if logo in logos_list["train"]:
+                random_index = random.randint(0, len(dataset["train"]["input"]))
+                dataset["train"]["input"].insert(random_index, input_tensor)
+                dataset["train"]["output"].insert(random_index, output_tensor)
 
-        elif logo in logos_list["test"]:
-            dataset["test"]["input"].append(input_tensor)
-            dataset["test"]["output"].append(output_tensor)
+            elif logo in logos_list["test"]:
+                dataset["test"]["input"].append(input_tensor)
+                dataset["test"]["output"].append(output_tensor)
+                break  # no oversampling in testing
 
-        else:
-            print(f"Some problem with {logo}. Neither in train or test set list.")
+            else:
+                print(f"Some problem with {logo}. Neither in train or test set list.")
+                break
 
     dataset["train"]["input"] = torch.stack(dataset["train"]["input"])
     dataset["train"]["output"] = torch.stack(dataset["train"]["output"])
