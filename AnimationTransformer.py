@@ -130,6 +130,7 @@ def train_loop(model, opt, loss_function, dataloader, device):
                   f"Remaining {int((total_expected - elapsed_time) / 60)} min ")
         i += 1
 
+    print(f"Epoch time: {(time.time() - t0)/60:.2f} min")
     return total_loss / len(dataloader)
 
 
@@ -167,24 +168,28 @@ def fit(model, optimizer, loss_function, train_dataloader, val_dataloader, epoch
     return train_loss_list, validation_loss_list
 
 
-def predict(model, source_sequence, sos_token: torch.Tensor, device, max_length=32):
+def predict(model, source_sequence, sos_token: torch.Tensor, device, max_length=32, eos_scaling=1):
     model.eval()
 
     source_sequence = source_sequence.float().to(device)
-    y_input = torch.unsqueeze(sos_token, 0).float().to(device)
+    y_input = torch.unsqueeze(sos_token, dim=0).float().to(device)
 
     i = 0
     while i < max_length:
         # Get source mask
         prediction = model(source_sequence, y_input,
+                           # tgt_mask=get_tgt_mask(y_input.size(0)).to(device),
                            src_key_padding_mask=create_pad_mask(source_sequence.unsqueeze(0))[0].to(device))
 
-        print(prediction)
-        pred_deep_svg, pred_type, pred_parameters = dataset_helper.unpack_embedding(prediction.squeeze(0), dim=0)
+        next_embedding = prediction[-1, :]  # prediction on last token
+        pred_deep_svg, pred_type, pred_parameters = dataset_helper.unpack_embedding(next_embedding, dim=0)
+        pred_deep_svg, pred_type, pred_parameters = pred_deep_svg.to(device), pred_type.to(device), pred_parameters.to(
+            device)
 
         # === TYPE ===
         # Apply Softmax
         type_softmax = torch.softmax(pred_type, dim=0)
+        type_softmax[0] = type_softmax[0] * eos_scaling  # Reduce EOS
         animation_type = torch.argmax(type_softmax, dim=0)
 
         # Break if EOS is most likely
