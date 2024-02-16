@@ -1,4 +1,6 @@
 import pandas as pd
+import numpy as np
+import random
 import os
 import sys
 from xml.dom import minidom
@@ -7,6 +9,8 @@ from collections import defaultdict
 sys.path.append(os.getcwd())
 from get_svg_size_pos import get_svg_bbox, get_path_bbox
 from get_style_attributes import get_style_attributes_path
+
+random.seed(0)
 
 filter_id = 0
 
@@ -29,20 +33,21 @@ def animate_logo(model_output: pd.DataFrame, logo_path: str):
         # Structure animations by type (check first 7 parameters)
         animations_by_type = defaultdict(list)
         for animation in animations_by_id[animation_id]:
-            animation_type = animation[:8].index(1)
+            if animation[0] == 1:
+                continue
             try:
-                animation_type = animation[:8].index(1)
+                animation_type = animation[1:10].index(1)
                 animations_by_type[animation_type].append(animation)
             except:
                 # No value found
                 print('Model output invalid: no animation type found')
                 return
-        # Normalize begin and duration per type
+            
         for animation_type in animations_by_type.keys():
             # Set up list of animations for later distribution
             current_animations = []
             # Sort animations by begin
-            animations_by_type[animation_type].sort(key=lambda l : l[8]) # TODO Begin is index 8???
+            animations_by_type[animation_type].sort(key=lambda l : l[10]) # Sort by begin
             # For every animation, check consistency of begin and duration, then set parameters
             for i in range(len(animations_by_type[animation_type])):
                 # Check if begin is equal to next animation's begin - in this case, set second begin to average of first and third animation
@@ -50,36 +55,35 @@ def animate_logo(model_output: pd.DataFrame, logo_path: str):
                 if len(animations_by_type[animation_type]) > 1:
                     j = 1
                     next_animation = animations_by_type[animation_type][j]
-                    while (i + j) < len(animations_by_type[animation_type]) and animations_by_type[animation_type][i][8] == next_animation[8]:
+                    while (i + j) < len(animations_by_type[animation_type]) and animations_by_type[animation_type][i][10] == next_animation[10]:
                         j += 1
                         next_animation = animations_by_type[animation_type][j]
                     if j != 1:
                         # Get difference
-                        difference = animations_by_type[animation_type][j][8] - animations_by_type[animation_type][i][8]
+                        difference = animations_by_type[animation_type][j][10] - animations_by_type[animation_type][i][10]
                         interval = difference / (j - i)
                         factor = 0
                         for a in range(i, j):
-                            animations_by_type[animation_type][a][8] = interval * factor
+                            animations_by_type[animation_type][a][10] = animations_by_type[animation_type][i][10] + interval * factor
                             factor += 1
                     # Check if duration and begin of next animation are consistent - if not, shorten duration
                     if i < len(animations_by_type[animation_type]) - 1:
-                        max_duration = animations_by_type[animation_type][i+1][8] - animations_by_type[animation_type][i][8]
-                        if animations_by_type[animation_type][i][9] > max_duration:
-                            animations_by_type[animation_type][i][9] = max_duration
-                # General parameters
-                begin = animations_by_type[animation_type][i][8]
-                dur = animations_by_type[animation_type][i][9]
+                        max_duration = animations_by_type[animation_type][i+1][10] - animations_by_type[animation_type][i][10]
+                        if animations_by_type[animation_type][i][11] > max_duration:
+                            animations_by_type[animation_type][i][11] = max_duration
+                # Get general parameters
+                begin = animations_by_type[animation_type][i][10]
+                dur = animations_by_type[animation_type][i][10]
                 # Check type and call method
-                if animation_type == 0:
+                if animation_type == 1:
                     # animation: translate
-                    # For every value, check if it is in svg width/height TODO!
-                    from_x = animations_by_type[animation_type][i][10]
-                    from_y = animations_by_type[animation_type][i][11]
+                    from_x = animations_by_type[animation_type][i][12]
+                    from_y = animations_by_type[animation_type][i][13]
                     # Check if there is a next translate animation
                     if i < len(animations_by_type[animation_type]) - 1:
                         # animation endpoint is next translate animation's starting point
-                        to_x = animations_by_type[animation_type][i+1][10]
-                        to_y = animations_by_type[animation_type][i+1][11]
+                        to_x = animations_by_type[animation_type][i+1][12]
+                        to_y = animations_by_type[animation_type][i+1][13]
                     else:
                         # animation endpoint is final position of object
                         to_x = 0
@@ -103,35 +107,77 @@ def animate_logo(model_output: pd.DataFrame, logo_path: str):
                         to_y = ymax 
                     # Append animation to list
                     current_animations.append(_animation_translate(animation_id, begin, dur, from_x, from_y, to_x, to_y))
-                elif animation_type == 1:
+                elif animation_type == 2:
+                    print('curve')
+                    from_x = animations_by_type[animation_type][i][12]
+                    from_y = animations_by_type[animation_type][i][13]
+                    via_x = animations_by_type[animation_type][i][14]
+                    via_y = animations_by_type[animation_type][i][15]
+                    # Check if there is a next curve animation
+                    if i < len(animations_by_type[animation_type]) - 1:
+                        # animation endpoint is next curve animation's starting point
+                        to_x = animations_by_type[animation_type][i+1][12]
+                        to_y = animations_by_type[animation_type][i+1][13]
+                    else:
+                        # animation endpoint is final position of object
+                        to_x = 0
+                        to_y = 0
+                    # Check if parameters are within boundary
+                    if from_x < xmin:
+                        from_x = xmin
+                    elif from_x > xmax:
+                        from_x = xmax
+                    if from_y < ymin:
+                        from_y = ymin
+                    elif from_y > ymax:
+                        from_y = ymax
+                    if via_x < xmin:
+                        via_x = xmin
+                    elif via_x > xmax:
+                        via_x = xmax
+                    if via_y < ymin:
+                        via_y = ymin
+                    elif via_y > ymax:
+                        via_y = ymax
+                    if to_x < xmin:
+                        to_x = xmin
+                    elif to_x > xmax:
+                        to_x = xmax
+                    if to_y < ymin:
+                        to_y = ymin
+                    elif to_y > ymax:
+                        to_y = ymax 
+                    # Append animation to list
+                    current_animations.append(_animation_curve(animation_id, begin, dur, from_x, from_y, via_x, via_y, to_x, to_y))
+                elif animation_type == 3:
                     # animation: scale
-                    from_f = animations_by_type[animation_type][i][12]
+                    from_f = animations_by_type[animation_type][i][16]
                     # Check if there is a next scale animation
                     if i < len(animations_by_type[animation_type]) - 1:
                         # animation endpoint is next scale animation's starting point
-                        to_f = animations_by_type[animation_type][i+1][12]
+                        to_f = animations_by_type[animation_type][i+1][16]
                     else:
                         # animation endpoint is final position of object
                         to_f = 1
                     current_animations.append(_animation_scale(animation_id, begin, dur, from_f, to_f))
-                elif animation_type == 2:
+                elif animation_type == 4:
                     # animation: rotate
-                    from_degree = animations_by_type[animation_type][i][13]
+                    from_degree = animations_by_type[animation_type][i][17]
                     # Check if there is a next scale animation
                     if i < len(animations_by_type[animation_type]) - 1:
                         # animation endpoint is next scale animation's starting point
-                        to_degree = animations_by_type[animation_type][i+1][13]
+                        to_degree = animations_by_type[animation_type][i+1][17]
                     else:
                         # animation endpoint is final position of object
                         to_degree = 360
                     current_animations.append(_animation_rotate(animation_id, begin, dur, from_degree, to_degree))
-                elif animation_type == 3:
+                elif animation_type == 5:
                     # animation: skewX
-                    from_x = animations_by_type[animation_type][i][14]
+                    from_x = animations_by_type[animation_type][i][18]
                     # Check if there is a next skewX animation
                     if i < len(animations_by_type[animation_type]) - 1:
                         # animation endpoint is next skewX animation's starting point
-                        to_x = animations_by_type[animation_type][i+1][14]
+                        to_x = animations_by_type[animation_type][i+1][18]
                     else:
                         # animation endpoint is final position of object
                         to_x = 1
@@ -145,13 +191,13 @@ def animate_logo(model_output: pd.DataFrame, logo_path: str):
                     elif to_x > xmax:
                         to_x = xmax
                     current_animations.append(_animation_skewX(animation_id, begin, dur, from_x, to_x))
-                elif animation_type == 4:
+                elif animation_type == 6:
                     # animation: skewY
-                    from_y = animations_by_type[animation_type][i][15]
+                    from_y = animations_by_type[animation_type][i][19]
                     # Check if there is a next skewY animation
                     if i < len(animations_by_type[animation_type]) - 1:
                         # animation endpoint is next skewY animation's starting point
-                        to_y = animations_by_type[animation_type][i+1][15]
+                        to_y = animations_by_type[animation_type][i+1][19]
                     else:
                         # animation endpoint is final position of object
                         to_y = 1
@@ -165,13 +211,13 @@ def animate_logo(model_output: pd.DataFrame, logo_path: str):
                     elif to_y > ymax:
                         to_y = ymax 
                     current_animations.append(_animation_skewY(animation_id, begin, dur, from_y, to_y))
-                elif animation_type == 5:
+                elif animation_type == 7:
                     # animation: fill
-                    from_rgb = '#' + _convert_to_hex_str(animations_by_type[animation_type][i][16]) + _convert_to_hex_str(animations_by_type[animation_type][i][17]) + _convert_to_hex_str(animations_by_type[animation_type][i][18])
+                    from_rgb = '#' + _convert_to_hex_str(animations_by_type[animation_type][i][20]) + _convert_to_hex_str(animations_by_type[animation_type][i][21]) + _convert_to_hex_str(animations_by_type[animation_type][i][22])
                     # Check if there is a next fill animation
                     if i < len(animations_by_type[animation_type]) - 1:
                         # animation endpoint is next fill animation's starting point
-                        to_rgb = '#' + _convert_to_hex_str(animations_by_type[animation_type][i+1][16]) + _convert_to_hex_str(animations_by_type[animation_type][i+1][17]) + _convert_to_hex_str(animations_by_type[animation_type][i+1][18])
+                        to_rgb = '#' + _convert_to_hex_str(animations_by_type[animation_type][i+1][20]) + _convert_to_hex_str(animations_by_type[animation_type][i+1][21]) + _convert_to_hex_str(animations_by_type[animation_type][i+1][22])
                     else:
                         fill_style = get_style_attributes_path(logo_path, animation_id, "fill")
                         stroke_style = get_style_attributes_path(logo_path, animation_id, "stroke")
@@ -181,24 +227,24 @@ def animate_logo(model_output: pd.DataFrame, logo_path: str):
                             color_hex = fill_style
                         to_rgb = color_hex
                     current_animations.append(_animation_fill(animation_id, begin, dur, from_rgb, to_rgb))
-                elif animation_type == 6:
+                elif animation_type == 8:
                     # animation: opacity
-                    from_f = animations_by_type[animation_type][i][19] / 100 # percent
+                    from_f = animations_by_type[animation_type][i][23] / 100 # percent
                     # Check if there is a next opacity animation
                     if i < len(animations_by_type[animation_type]) - 1:
                         # animation endpoint is next opacity animation's starting point
-                        to_f = animations_by_type[animation_type][i+1][19] / 100 # percent
+                        to_f = animations_by_type[animation_type][i+1][23] / 100 # percent
                     else:
                         # animation endpoint is final position of object
                         to_f = 1
                     current_animations.append(_animation_opacity(animation_id, begin, dur, from_f, to_f))
-                elif animation_type == 7:
+                elif animation_type == 9:
                     # animation: blur
-                    from_f = animations_by_type[animation_type][i][20]
+                    from_f = animations_by_type[animation_type][i][24]
                     # Check if there is a next blur animation
                     if i < len(animations_by_type[animation_type]) - 1:
                         # animation endpoint is next blur animation's starting point
-                        to_f = animations_by_type[animation_type][i+1][20]
+                        to_f = animations_by_type[animation_type][i+1][24]
                     else:
                         # animation endpoint is final position of object
                         to_f = 1
@@ -211,7 +257,6 @@ def _convert_to_hex_str(i: int):
     if i < 16:
         h = '0' + h
     return h
-
         
 def _animation_translate(animation_id: int, begin: float, dur: float, from_x: int, from_y: int, to_x: int, to_y: int):
     print('animation: translate')
@@ -225,6 +270,19 @@ def _animation_translate(animation_id: int, begin: float, dur: float, from_x: in
     animation_dict['dur'] = str(dur)
     animation_dict['fill'] = 'freeze'
     animation_dict['from'] = f'{from_x} {from_y}'
+    animation_dict['to'] = f'{to_x} {to_y}'
+    return animation_dict
+
+def _animation_curve(animation_id: int, begin: float, dur: float, from_x: int, from_y: int, via_x: int, via_y: int, to_x: int, to_y: int):
+    print('animation: curve')
+    animation_dict = {}
+    animation_dict['animation_id'] = animation_id
+    animation_dict['animation_type'] = 'animate_motion'
+    animation_dict['begin'] = str(begin)
+    animation_dict['dur'] = str(dur)
+    animation_dict['fill'] = 'freeze'
+    animation_dict['from'] = f'{from_x} {from_y}'
+    animation_dict['via'] = f'{via_x} {via_y}'
     animation_dict['to'] = f'{to_x} {to_y}'
     return animation_dict
 
@@ -356,6 +414,9 @@ def _insert_animations(animations: list, path: str, target_path: str):
         if animation['animation_type'] == 'animate_transform':
             animate_statement = _create_animate_transform_statement(animation)
             current_element.appendChild(document.createElement(animate_statement))
+        elif animation['animation_type'] == 'animate_motion':
+            animate_statement = _create_animate_motion_statement(animation)
+            current_element.appendChild(document.createElement(animate_statement))
         elif animation['animation_type'] == 'animate':
             animate_statement = _create_animate_statement(animation)
             current_element.appendChild(document.createElement(animate_statement))
@@ -406,7 +467,7 @@ def _create_animate_transform_statement(animation_dict: dict):
                 f'dur="{str(animation_dict["dur"])}" ' \
                 f'from="{str(animation_dict["from"])}" ' \
                 f'to="{str(animation_dict["to"])}" ' \
-                f'fill="{str(animation_dict["fill"])}"' \
+                f'fill="{str(animation_dict["fill"])}" ' \
                 'additive="sum"'
 
     return animation
@@ -420,9 +481,20 @@ def _create_animate_statement(animation_dict: dict):
                 f'dur="{str(animation_dict["dur"])}" ' \
                 f'from="{str(animation_dict["from"])}" ' \
                 f'to="{str(animation_dict["to"])}" ' \
-                f'fill="{str(animation_dict["fill"])}"'\
+                f'fill="{str(animation_dict["fill"])}" '\
                 'additive="sum"'
 
+    return animation
+
+def _create_animate_motion_statement(animation_dict: dict):
+    """ Set up animatie motion statement from model output for ANIMATE_MOTION animations 
+    """
+    animation = f'animateMotion ' \
+                f'begin="{str(animation_dict["begin"])}" ' \
+                f'dur="{str(animation_dict["dur"])}" ' \
+                f'path="M{animation_dict["from"]}" Q{animation_dict['via']} {animation_dict['to']}' \
+                f'fill="{str(animation_dict["fill"])}" '\
+                'additive="sum"'
     return animation
 
 def _create_animate_filter_statement(animation_dict: dict, document: minidom.Document):
@@ -468,9 +540,29 @@ def _create_animate_filter_statement(animation_dict: dict, document: minidom.Doc
 
 
 
-def randomly_animate_logo(number_of_animations: int, previously_generated: pd.DataFrame = None):
+def randomly_animate_logo(logo_path: str, target_path: str, number_of_animations: int, previously_generated: pd.DataFrame = None):
     # Creates model output equal to defined number of animations. They are then randomly distributed over the paths.
-    print('Random animations')
+    # Assign animation id to every path - TODO this changes the original logo!
+    document = minidom.parse(logo_path)
+    paths = document.getElementsByTagName('path') + document.getElementsByTagName('circle') + document.getElementsByTagName(
+        'ellipse') + document.getElementsByTagName('line') + document.getElementsByTagName(
+        'polygon') + document.getElementsByTagName('polyline') + document.getElementsByTagName(
+        'rect') + document.getElementsByTagName('text')
+    for i in range(len(paths)):
+        paths[i].setAttribute('animation_id', str(i))
+    with open(target_path, 'wb') as svg_file:
+        svg_file.write(document.toxml(encoding='iso-8859-1'))
+    # Create random animations
+    for i in range(0, number_of_animations):
+        animation_type = random.randint(0, 8) # Determine animation type (as of now only primitive animation types)
+        model_output = np.zeros(18)
+        model_output[animation_type] = 1 # Set animation type
+        # Set animation parameters
+        
+    
+    
+    
+
 
 model_output = [
     {
