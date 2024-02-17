@@ -352,8 +352,8 @@ def _animation_fill(animation_id: int, begin: float, dur: float, from_rgb: str, 
     print('animation: fill')
     animation_dict = {}
     animation_dict['animation_id'] = animation_id
-    animation_dict['animation_type'] = 'animate_transform'
-    animation_dict['attributeName'] = 'transform'
+    animation_dict['animation_type'] = 'animate'
+    animation_dict['attributeName'] = 'fill'
     animation_dict['attributeType'] = 'XML'
     animation_dict['type'] = 'fill'
     animation_dict['begin'] = str(begin)
@@ -367,8 +367,8 @@ def _animation_opacity(animation_id: int, begin: float, dur: float, from_f: floa
     print('animation: opacity')
     animation_dict = {}
     animation_dict['animation_id'] = animation_id
-    animation_dict['animation_type'] = 'animate_transform'
-    animation_dict['attributeName'] = 'transform'
+    animation_dict['animation_type'] = 'animate'
+    animation_dict['attributeName'] = 'opacity'
     animation_dict['attributeType'] = 'XML'
     animation_dict['type'] = 'opacity'
     animation_dict['begin'] = str(begin)
