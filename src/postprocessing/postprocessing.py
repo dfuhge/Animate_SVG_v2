@@ -7,7 +7,7 @@ from xml.dom import minidom
 from collections import defaultdict
 
 sys.path.append(os.getcwd())
-from get_svg_size_pos import get_svg_bbox, get_path_bbox
+from get_svg_size_pos import get_svg_bbox, get_path_bbox, get_midpoint_of_path_bbox
 from get_style_attributes import get_style_attributes_path
 
 random.seed(0)
@@ -26,9 +26,9 @@ def animate_logo(model_output: pd.DataFrame, logo_path: str):
     total_animations = []
     for animation_id in animations_by_id.keys():
         path_xmin, path_xmax, path_ymin, path_ymax = get_path_bbox(logo_path, animation_id)
-        xmin = path_xmin - logo_xmin
+        xmin = logo_xmin - path_xmin
         xmax = logo_xmax - path_xmax
-        ymin = path_ymin - logo_ymin
+        ymin = logo_ymin - path_ymin
         ymax = logo_ymax - path_ymax
         # Structure animations by type (check first 7 parameters)
         animations_by_type = defaultdict(list)
@@ -163,6 +163,8 @@ def animate_logo(model_output: pd.DataFrame, logo_path: str):
                 elif animation_type == 4:
                     # animation: rotate
                     from_degree = animations_by_type[animation_type][i][17]
+                    # Get midpoints
+                    midpoints = get_midpoint_of_path_bbox(logo_path, animation_id)
                     # Check if there is a next scale animation
                     if i < len(animations_by_type[animation_type]) - 1:
                         # animation endpoint is next scale animation's starting point
@@ -170,7 +172,7 @@ def animate_logo(model_output: pd.DataFrame, logo_path: str):
                     else:
                         # animation endpoint is final position of object
                         to_degree = 360
-                    current_animations.append(_animation_rotate(animation_id, begin, dur, from_degree, to_degree))
+                    current_animations.append(_animation_rotate(animation_id, begin, dur, from_degree, to_degree, midpoints))
                 elif animation_type == 5:
                     # animation: skewX
                     from_x = animations_by_type[animation_type][i][18]
@@ -301,7 +303,7 @@ def _animation_scale(animation_id: int, begin: float, dur: float, from_f: float,
     animation_dict['to'] = str(to_f)
     return animation_dict
 
-def _animation_rotate(animation_id: int, begin: float, dur: float, from_degree: int, to_degree: int):
+def _animation_rotate(animation_id: int, begin: float, dur: float, from_degree: int, to_degree: int, midpoints: list):
     print('animation: rotate')
     animation_dict = {}
     animation_dict['animation_id'] = animation_id
@@ -312,8 +314,8 @@ def _animation_rotate(animation_id: int, begin: float, dur: float, from_degree: 
     animation_dict['begin'] = str(begin)
     animation_dict['dur'] = str(dur)
     animation_dict['fill'] = 'freeze'
-    animation_dict['from'] = f'{from_degree}' #TODO maybe necessary to define midpoint!
-    animation_dict['to'] = f'{to_degree}'
+    animation_dict['from'] = f'{from_degree} {midpoints[0]} {midpoints[1]}'
+    animation_dict['to'] = f'{to_degree} {midpoints[0]} {midpoints[1]}'
     return animation_dict
 
 def _animation_skewX(animation_id: int, begin: float, dur: float, from_i: int, to_i: int):
