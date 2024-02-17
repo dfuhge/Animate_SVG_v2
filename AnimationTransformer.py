@@ -127,12 +127,12 @@ def train_loop(model, opt, loss_function, dataloader, device):
         if i == 1 or i % 10 == 0:
             elapsed_time = time.time() - t0
             total_expected = elapsed_time / i * len(dataloader)
-            print(f"{i}: Time per Batch {int(elapsed_time / i)}s | "
-                  f"Total expected {int(total_expected / 60)} min | "
-                  f"Remaining {int((total_expected - elapsed_time) / 60)} min ")
+            print(f">> {i}: Time per Batch {elapsed_time / i : .2f}s | "
+                  f"Total expected {total_expected / 60 : .2f} min | "
+                  f"Remaining {(total_expected - elapsed_time) / 60 : .2f} min ")
         i += 1
 
-    print(f"Epoch time: {(time.time() - t0)/60:.2f} min")
+    print(f">> Epoch time: {(time.time() - t0)/60:.2f} min")
     return total_loss / len(dataloader)
 
 
@@ -150,7 +150,6 @@ def validation_loop(model, loss_function, dataloader, device):
 
 
 def fit(model, optimizer, loss_function, train_dataloader, val_dataloader, epochs, device):
-    # Used for plotting later on
     train_loss_list, validation_loss_list = [], []
 
     print("Training and validating model")
