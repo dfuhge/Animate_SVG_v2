@@ -15,7 +15,7 @@ class AnimationTransformer(nn.Module):
             num_encoder_layers,
             num_decoder_layers,
             dropout_p,
-            pos_encoder_max_len
+            use_positional_encoder=True
     ):
         super().__init__()
 
@@ -23,10 +23,11 @@ class AnimationTransformer(nn.Module):
         self.dim_model = dim_model
 
         # TODO: Currently left out, as input sequence shuffled. Later check if use is beneficial.
+        self.use_positional_encoder = use_positional_encoder
         self.positional_encoder = PositionalEncoding(
             dim_model=dim_model,
-            dropout_p=dropout_p,
-            max_len=pos_encoder_max_len)
+            dropout_p=dropout_p
+        )
 
         self.transformer = nn.Transformer(
             d_model=dim_model,
@@ -41,8 +42,9 @@ class AnimationTransformer(nn.Module):
         # Src size must be (batch_size, src sequence length)
         # Tgt size must be (batch_size, tgt sequence length)
 
-        # src = self.positional_encoder(src)
-        # tgt = self.positional_encoder(tgt)
+        if self.use_positional_encoder:
+            src = self.positional_encoder(src)
+            tgt = self.positional_encoder(tgt)
 
         # Transformer blocks - Out size = (sequence length, batch_size, num_tokens)
         out = self.transformer(src, tgt, tgt_mask=tgt_mask, src_key_padding_mask=src_key_padding_mask,
@@ -229,30 +231,37 @@ def predict(model, source_sequence, sos_token: torch.Tensor, device, max_length=
 
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, dim_model, dropout_p, max_len):
-        super().__init__()
-        # Modified version from: https://pytorch.org/tutorials/beginner/transformer_tutorial.html
-        # max_len determines how far the position can have an effect on a token (window)
+    def __init__(self, dim_model, dropout_p, max_len=5000):
+        """
+        Initializes the PositionalEncoding module which injects information about the relative or absolute position
+        of the tokens in the sequence. The positional encodings have the same dimension as the embeddings so that the
+        two can be summed. Uses a sinusoidal pattern for positional encoding.
 
-        # Info
-        self.dropout = nn.Dropout(dropout_p)
+        Args:
+            dim_model (int): The dimension of the embeddings and the expected dimension of the positional encoding.
+            dropout_p (float): Dropout probability to be applied to the summed embeddings and positional encodings.
+            max_len (int): The max length of the sequences for which positional encodings are precomputed and stored.
+        """
+        super(PositionalEncoding, self).__init__()
+        self.dropout = nn.Dropout(p=dropout_p)
 
-        # Encoding - From formula
-        pos_encoding = torch.zeros(max_len, dim_model)
-        positions_list = torch.arange(0, max_len, dtype=torch.float).view(-1, 1)  # 0, 1, 2, 3, 4, 5
-        division_term = torch.exp(
-            torch.arange(0, dim_model, 2).float() * (-math.log(10000.0)) / dim_model)  # 1000^(2i/dim_model)
+        position = torch.arange(max_len).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, dim_model, 2).float() * (-math.log(10000.0) / dim_model))
+        pos_encoding = torch.zeros(max_len, 1, dim_model)
+        pos_encoding[:, 0, 0::2] = torch.sin(position * div_term)
+        pos_encoding[:, 0, 1::2] = torch.cos(position * div_term)
 
-        # PE(pos, 2i) = sin(pos/1000^(2i/dim_model))
-        pos_encoding[:, 0::2] = torch.sin(positions_list * division_term)
+        self.register_buffer('pos_encoding', pos_encoding)
 
-        # PE(pos, 2i + 1) = cos(pos/1000^(2i/dim_model))
-        pos_encoding[:, 1::2] = torch.cos(positions_list * division_term)
+    def forward(self, embedding: torch.Tensor) -> torch.Tensor:
+        """
+        Applies positional encoding to the input embeddings and applies dropout.
 
-        # Saving buffer (same as parameter without gradients needed)
-        pos_encoding = pos_encoding.unsqueeze(0).transpose(0, 1)
-        self.register_buffer("pos_encoding", pos_encoding)
+        Args:
+            embedding (torch.Tensor): The input embeddings with shape [batch_size, seq_len, dim_model]
 
-    def forward(self, token_embedding: torch.tensor) -> torch.tensor:
-        # Residual connection + pos encoding
-        return self.dropout(token_embedding + self.pos_encoding[:token_embedding.size(0), :])
+        Returns:
+            torch.Tensor: The embeddings with positional encoding applied, and dropout, having the same shape as the
+            input token embeddings [seq_len, batch_size, dim_model].
+        """
+        return self.dropout(embedding + self.pos_encoding[:embedding.size(0), :])
