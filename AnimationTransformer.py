@@ -178,11 +178,11 @@ def predict(model, source_sequence, sos_token: torch.Tensor, device, max_length=
     i = 0
     while i < max_length:
         # Get source mask
-        prediction = model(source_sequence, y_input,
+        prediction = model(source_sequence.unsqueeze(0), y_input.unsqueeze(0),  # un-squeeze for batch
                            # tgt_mask=get_tgt_mask(y_input.size(0)).to(device),
-                           src_key_padding_mask=create_pad_mask(source_sequence.unsqueeze(0))[0].to(device))
+                           src_key_padding_mask=create_pad_mask(source_sequence.unsqueeze(0)).to(device))
 
-        next_embedding = prediction[-1, :]  # prediction on last token
+        next_embedding = prediction[0, -1, :]  # prediction on last token
         pred_deep_svg, pred_type, pred_parameters = dataset_helper.unpack_embedding(next_embedding, dim=0)
         pred_deep_svg, pred_type, pred_parameters = pred_deep_svg.to(device), pred_type.to(device), pred_parameters.to(
             device)
