@@ -15,30 +15,31 @@ random.seed(0)
 DATASET_ROOT = "data/raw_dataset"
 logo_id = 0
 
-def download_image_from_link(link):
+def download_image_from_link(filename, link):
     global logo_id
-    format = link.split('.')[3][:3]
-    if "svg" in format:
-        # retrieve content
-        opener = urllib.request.build_opener()
-        opener.addheaders = [('User-agent', 'Mozilla/5.0')]
-        urllib.request.install_opener(opener)
+    # retrieve content
+    opener = urllib.request.build_opener()
+    opener.addheaders = [('User-agent', 'Mozilla/5.0')]
+    urllib.request.install_opener(opener)
+    try:
         content = urllib.request.urlopen(link).read().decode('UTF-8')
         if not os.path.exists(DATASET_ROOT):
             os.mkdir(DATASET_ROOT)
-        with open(os.path.join(DATASET_ROOT, 'logo_') + str(logo_id) + '.' + format, 'w') as file:
+        with open(os.path.join(DATASET_ROOT, filename), 'w') as file:
             file.write(content)
-        logo_id += 1
+    except:
+        print('Could not download: ' + link)
+    logo_id += 1
 
 
-def download_images(img_numbers):
-    with open('src/data_scraper/results.txt') as f:
+def download_images(scope):
+    with open('src/data_scraper/results_shuffled.txt') as f:
         i = 0
         for line in f:
-            if i in img_numbers:
-                download_image_from_link(line)
+            if i < scope:
+                s = line.split(';')
+                download_image_from_link(s[0], s[1])
             i += 1
 
 # Adjust these numbers to get a different range and size of samples
-img_list = random.sample(range(0, 119820), 2000)
-download_images(img_list)
+download_images(2000)
