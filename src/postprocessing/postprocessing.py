@@ -30,10 +30,11 @@ def animate_logo(model_output: pd.DataFrame, logo_path: str):
         xmax = logo_xmax - path_xmax
         ymin = logo_ymin - path_ymin
         ymax = logo_ymax - path_ymax
-        # Structure animations by type (check first 7 parameters)
+        # Structure animations by type (check first 10 parameters)
         animations_by_type = defaultdict(list)
         for animation in animations_by_id[animation_id]:
             if animation[0] == 1:
+                # EOS
                 continue
             try:
                 animation_type = animation[1:10].index(1)
@@ -42,6 +43,8 @@ def animate_logo(model_output: pd.DataFrame, logo_path: str):
                 # No value found
                 print('Model output invalid: no animation type found')
                 return
+            
+        
             
         for animation_type in animations_by_type.keys():
             # Set up list of animations for later distribution
@@ -71,6 +74,7 @@ def animate_logo(model_output: pd.DataFrame, logo_path: str):
                         max_duration = animations_by_type[animation_type][i+1][10] - animations_by_type[animation_type][i][10]
                         if animations_by_type[animation_type][i][11] > max_duration:
                             animations_by_type[animation_type][i][11] = max_duration
+
                 # Get general parameters
                 begin = animations_by_type[animation_type][i][10]
                 dur = animations_by_type[animation_type][i][10]
@@ -252,6 +256,14 @@ def animate_logo(model_output: pd.DataFrame, logo_path: str):
                         to_f = 1
                     current_animations.append(_animation_blur(animation_id, begin, dur, from_f, to_f))
             total_animations += current_animations
+    # Shift begin - TODO test
+    min_b = np.inf
+    for animation in total_animations:
+        if animation['begin'] < min_b:
+            min_b = animation['begin']
+    for animation in total_animations:
+        animation['begin'] = animation['begin'] - min_b
+
     _insert_animations(total_animations, logo_path, logo_path)
 
 def _convert_to_hex_str(i: int):
