@@ -93,36 +93,37 @@ def generate_dataset(dataframe_index: pd.DataFrame,
         oversample = logo_info['repeat']
         print(f"Processing {logo} with {file}: ")
 
-        for j in range(oversample):
-            input_tensor = _generate_input_sequence(
-                input_sequences_dict_used[logo].copy(),
-                input_sequences_dict_unused[logo].copy(),
-                null_features=14,  # TODO depends on architecture later
-                sequence_length=sequence_length_input,
-                # is_randomized=True, always now
-                is_padding=True
-            )
+        if input_sequences_dict_used.keys().__contains__(logo) and input_sequences_dict_unused.keys().__contains__(logo):
+            for j in range(oversample):
+                input_tensor = _generate_input_sequence(
+                    input_sequences_dict_used[logo].copy(),
+                    input_sequences_dict_unused[logo].copy(),
+                    null_features=14,  # TODO depends on architecture later
+                    sequence_length=sequence_length_input,
+                    # is_randomized=True, always now
+                    is_padding=True
+                )
 
-            output_tensor = _generate_output_sequence(
-                output_sequences[(output_sequences['filename'] == logo) & (output_sequences['file'] == file)].copy(),
-                sequence_length=sequence_length_output,
-                is_randomized=False,
-                is_padding=True
-            )
-            # append to lists
-            if logo in logos_list["train"]:
-                random_index = random.randint(0, len(dataset["train"]["input"]))
-                dataset["train"]["input"].insert(random_index, input_tensor)
-                dataset["train"]["output"].insert(random_index, output_tensor)
+                output_tensor = _generate_output_sequence(
+                    output_sequences[(output_sequences['filename'] == logo) & (output_sequences['file'] == file)].copy(),
+                    sequence_length=sequence_length_output,
+                    is_randomized=False,
+                    is_padding=True
+                )
+                # append to lists
+                if logo in logos_list["train"]:
+                    random_index = random.randint(0, len(dataset["train"]["input"]))
+                    dataset["train"]["input"].insert(random_index, input_tensor)
+                    dataset["train"]["output"].insert(random_index, output_tensor)
 
-            elif logo in logos_list["test"]:
-                dataset["test"]["input"].append(input_tensor)
-                dataset["test"]["output"].append(output_tensor)
-                break  # no oversampling in testing
+                elif logo in logos_list["test"]:
+                    dataset["test"]["input"].append(input_tensor)
+                    dataset["test"]["output"].append(output_tensor)
+                    break  # no oversampling in testing
 
-            else:
-                print(f"Some problem with {logo}. Neither in train or test set list.")
-                break
+                else:
+                    print(f"Some problem with {logo}. Neither in train or test set list.")
+                    break
 
     dataset["train"]["input"] = torch.stack(dataset["train"]["input"])
     dataset["train"]["output"] = torch.stack(dataset["train"]["output"])
@@ -207,7 +208,7 @@ def _generate_output_sequence(animation: pd.DataFrame,
         animation = animation.sample(frac=1).reset_index(drop=True)
         print("Note: Randomization not implemented yet")
 
-    animation.sort_values(by=['a13'], inplace=True)  # again ordered by time start.
+    animation.sort_values(by=['a10'], inplace=True)  # again ordered by time start.
     animation.drop(columns=['file', 'filename'], inplace=True)
 
     # Append the EOS row to the DataFrame
