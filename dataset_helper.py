@@ -8,17 +8,30 @@ import torch
 # SEQUENCE GENERATION
 PADDING_VALUE = float('-100')
 
+# ANIMATION_PARAMETER_INDICES = {
+#     0: [],  # EOS
+#     1: [10, 11, 12, 13],  # translate: begin, dur, x, y
+#     2: [10, 11, 14, 15],  # curve: begin, dur, via_x, via_y
+#     3: [10, 11, 16], # scale: begin, dur, from_factor
+#     4: [10, 11, 17], # rotate: begin, dur, from_degree
+#     5: [10, 11, 18], # skewX: begin, dur, from_x
+#     6: [10, 11, 19], # skewY: begin, dur, from_y
+#     7: [10, 11, 20, 21, 22], # fill: begin, dur, from_r, from_g, from_b
+#     8: [10, 11, 23], # opcaity: begin, dur, from_f
+#     9: [10, 11, 24], # blur: begin, dur, from_f
+# }
+
 ANIMATION_PARAMETER_INDICES = {
     0: [],  # EOS
-    1: [10, 11, 12, 13],  # translate: begin, dur, x, y
-    2: [10, 11, 14, 15],  # curve: begin, dur, via_x, via_y
-    3: [10, 11, 16], # scale: begin, dur, from_factor
-    4: [10, 11, 17], # rotate: begin, dur, from_degree
-    5: [10, 11, 18], # skewX: begin, dur, from_x
-    6: [10, 11, 19], # skewY: begin, dur, from_y
-    7: [10, 11, 20, 21, 22], # fill: begin, dur, from_r, from_g, from_b
-    8: [10, 11, 23], # opcaity: begin, dur, from_f
-    9: [10, 11, 24], # blur: begin, dur, from_f
+    1: [0, 1, 2, 3],  # translate: begin, dur, x, y
+    2: [0, 1, 4, 5],  # curve: begin, dur, via_x, via_y
+    3: [0, 1, 6], # scale: begin, dur, from_factor
+    4: [0, 1, 7], # rotate: begin, dur, from_degree
+    5: [0, 1, 8], # skewX: begin, dur, from_x
+    6: [0, 1, 9], # skewY: begin, dur, from_y
+    7: [0, 1, 10, 11, 12], # fill: begin, dur, from_r, from_g, from_b
+    8: [0, 1, 13], # opcaity: begin, dur, from_f
+    9: [0, 1, 14], # blur: begin, dur, from_f
 }
 
 
@@ -37,19 +50,19 @@ def unpack_embedding(embedding: torch.Tensor, dim=0, device="cpu") -> tuple[torc
         raise ValueError('Dimension of 270 required.')
 
     if dim == 0:
-        deep_svg = embedding[: -25].to(device)
-        types = embedding[-25: -9].to(device)
-        parameters = embedding[-9:].to(device)
+        deep_svg = embedding[: -26].to(device)
+        types = embedding[-26: -15].to(device)
+        parameters = embedding[-15:].to(device)
 
     elif dim == 1:
-        deep_svg = embedding[:, : -25].to(device)
-        types = embedding[:, -25: -9].to(device)
-        parameters = embedding[:, -9:].to(device)
+        deep_svg = embedding[:, : -26].to(device)
+        types = embedding[:, -26: -15].to(device)
+        parameters = embedding[:, -15:].to(device)
 
     elif dim == 2:
-        deep_svg = embedding[:, :, : -25].to(device)
-        types = embedding[:, :, -25: -9].to(device)
-        parameters = embedding[:, :, -9:].to(device)
+        deep_svg = embedding[:, :, : -26].to(device)
+        types = embedding[:, :, -26: -15].to(device)
+        parameters = embedding[:, :, -15:].to(device)
 
     else:
         raise ValueError('Dimension > 2 not possible.')
@@ -96,12 +109,13 @@ def generate_dataset(dataframe_index: pd.DataFrame,
         oversample = logo_info['repeat']
         print(f"Processing {logo} with {file}: ")
 
-        if input_sequences_dict_used.keys().__contains__(logo):
+        if input_sequences_dict_used.keys().__contains__(logo) and input_sequences_dict_unused.keys().__contains__(logo):
             for j in range(oversample):
                 input_tensor = _generate_input_sequence(
                     input_sequences_dict_used[logo].copy(),
                     input_sequences_dict_unused[logo].copy(),
-                    null_features=14,  # TODO depends on architecture later
+                    #pd.DataFrame(),
+                    null_features=26,  # TODO depends on architecture later
                     sequence_length=sequence_length_input,
                     # is_randomized=True, always now
                     is_padding=True
@@ -166,7 +180,7 @@ def _generate_input_sequence(logo_embeddings_used: pd.DataFrame,
     if remaining_slots > 0:
         sample_size = min(len(logo_embeddings_unused), remaining_slots)
         additional_embeddings = logo_embeddings_unused.sample(n=sample_size, replace=False)
-        #logo_embeddings = pd.concat([logo_embeddings, additional_embeddings], ignore_index=True)
+        logo_embeddings = pd.concat([logo_embeddings, additional_embeddings], ignore_index=True)
         logo_embeddings.reset_index()
 
     # Randomization
@@ -213,7 +227,7 @@ def _generate_output_sequence(animation: pd.DataFrame,
         print("Note: Randomization not implemented yet")
 
     animation.sort_values(by=['a10'], inplace=True)  # again ordered by time start.
-    animation.drop(columns=['file', 'filename'], inplace=True)
+    animation.drop(columns=['file', 'filename', "Unnamed: 0",	"id"], inplace=True)
 
     # Append the EOS row to the DataFrame
     sos_eos_row = {col: 0 for col in animation.columns}

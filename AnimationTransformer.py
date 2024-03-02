@@ -199,12 +199,12 @@ def predict(model, source_sequence, sos_token: torch.Tensor, device, max_length=
             y_input = torch.cat((y_input, sos_token.unsqueeze(0).to(device)), dim=0)
             return y_input
 
-        pred_type = torch.zeros(7)
+        pred_type = torch.zeros(11)
         pred_type[animation_type] = 1
 
         # === DEEP SVG ===
         # Find the closest path
-        distances = [torch.norm(pred_deep_svg - embedding[:-14]) for embedding in source_sequence]
+        distances = [torch.norm(pred_deep_svg - embedding[:-26]) for embedding in source_sequence]
         closest_index = distances.index(min(distances))
         closest_token = source_sequence[closest_index]
 
@@ -216,7 +216,7 @@ def predict(model, source_sequence, sos_token: torch.Tensor, device, max_length=
             pred_parameters[j] = -1
 
         # === SEQUENCE ===
-        y_new = torch.concat([closest_token[:-14], pred_type.to(device), pred_parameters], dim=0)
+        y_new = torch.concat([closest_token[:-26], pred_type.to(device), pred_parameters], dim=0)
         y_input = torch.cat((y_input, y_new.unsqueeze(0)), dim=0)
 
         # === INFO PRINT ===
