@@ -31,7 +31,7 @@ def compute_embedding_folder(folder_path: str, model_path: str, save: str = None
     print('Concatenating')
     data = pd.concat(data_list)
     if not save == None:
-        output = open(os.path.join(save, 'svg_embedding.pkl'), 'wb')
+        output = open(os.path.join(save, 'svg_embedding_5000.pkl'), 'wb')
         pickle.dump(data, output)
         output.close()
     return data
@@ -145,7 +145,7 @@ def compute_embedding(path: str, model_path: str, save: str = None) -> pd.DataFr
     data.dropna(inplace=True)
     data.reset_index(drop=True, inplace=True)
     if not save == None:
-        output = open(os.path.join(save, 'svg_embedding.pkl'), 'wb')
+        output = open(os.path.join(save, 'svg_embedding_5000.pkl'), 'wb')
         pickle.dump(data, output)
         output.close()
     print('Embedding computed')
