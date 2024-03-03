@@ -169,8 +169,11 @@ def fit(model, optimizer, loss_function, train_dataloader, val_dataloader, epoch
     return train_loss_list, validation_loss_list
 
 
-def predict(model, source_sequence, sos_token: torch.Tensor, device, max_length=32, eos_scaling=1):
-    model.eval()
+def predict(model, source_sequence, sos_token: torch.Tensor, device, max_length=32, eos_scaling=1, backpropagate=False):
+    if backpropagate:
+        model.train()
+    else:
+        model.eval()
 
     source_sequence = source_sequence.float().to(device)
     y_input = torch.unsqueeze(sos_token, dim=0).float().to(device)
