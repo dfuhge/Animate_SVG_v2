@@ -85,28 +85,13 @@ class Transformer(nn.Module):
         out = self.out(transformer_out)
         
         return out
-      
-    def get_tgt_mask(self, size) -> torch.tensor:
-        # Generates a squeare matrix where the each row allows one word more to be seen
-        mask = torch.tril(torch.ones(size, size) == 1) # Lower triangular matrix
-        mask = mask.float()
-        mask = mask.masked_fill(mask == 0, float('-inf')) # Convert zeros to -inf
-        mask = mask.masked_fill(mask == 1, float(0.0)) # Convert ones to 0
-        
-        # EX for size=5:
-        # [[0., -inf, -inf, -inf, -inf],
-        #  [0.,   0., -inf, -inf, -inf],
-        #  [0.,   0.,   0., -inf, -inf],
-        #  [0.,   0.,   0.,   0., -inf],
-        #  [0.,   0.,   0.,   0.,   0.]]
-            
-        return mask
+
+
     def create_pad_mask(self, matrix: torch.tensor, pad_token: int) -> torch.tensor:
         # If matrix = [1,2,3,0,0,0] where pad_token=0, the result mask is
         # [False, False, False, True, True, True]
         mask = []
-        pad_token = 500
-        #print(matrix)
+        
         for i in range(0, matrix.size(0)):
             seq = []
             for j in range(0, matrix.size(1)):
@@ -118,6 +103,98 @@ class Transformer(nn.Module):
         result = torch.tensor(mask)
         #print(matrix, result, result.shape)
         return result
+    def train_loop(model, opt, loss_fn, dataloader):
+        """
+        Method from "A detailed guide to Pytorch's nn.Transformer() module.", by
+        Daniel Melchor: https://medium.com/@danielmelchor/a-detailed-guide-to-pytorchs-nn-transformer-module-c80afbc9ffb1
+        """
+        
+        model.train()
+        total_loss = 0
+        
+        for batch in dataloader:
+            X, y = batch[0], batch[1]
+            X, y = torch.tensor(X).to(device), torch.tensor(y).to(device)
+
+            
+            
+            #tgt_mask = model.get_tgt_mask(sequence_length).to(device)
+            pad_mask_src = model.create_pad_mask(X, 500).to(device)
+            #pad_mask_tgt = model.create_pad_mask(y, 10).to(device)
+
+            # Standard training except we pass in y_input and tgt_mask
+            #print(X.shape, y.shape)
+            pred = model(X, y, src_pad_mask=pad_mask_src)
+
+            print('Predictions: ',pred[:,:,:1])
+
+            # Permute pred to have batch size first again
+            #pred = pred.permute(1, 2, 0)      
+            loss = loss_fn(pred, y)
+
+            opt.zero_grad()
+            loss.backward()
+            opt.step()
+        
+            total_loss += loss.detach().item()
+            
+        return total_loss / len(dataloader)
+    
+    def validation_loop(model, loss_fn, dataloader):
+        """
+        Method from "A detailed guide to Pytorch's nn.Transformer() module.", by
+        Daniel Melchor: https://medium.com/@danielmelchor/a-detailed-guide-to-pytorchs-nn-transformer-module-c80afbc9ffb1
+        """
+        
+        model.eval()
+        total_loss = 0
+        
+        with torch.no_grad():
+            for batch in dataloader:
+                X, y = batch[0], batch[1]
+                X, y = torch.tensor(X, device=device), torch.tensor(y, device=device)
+
+                #tgt_mask = model.get_tgt_mask(sequence_length).to(device)
+                pad_mask_src = model.create_pad_mask(X, 500).to(device)
+                #pad_mask_tgt = model.create_pad_mask(y, 10).to(device)
+
+                # Standard training except we pass in y_input and src_mask
+                #print("val ", X.shape, y.shape, X.dtype, y.dtype)
+                #pred = model(X, y, tgt_mask, src_pad_mask=pad_mask_src, tgt_pad_mask=pad_mask_tgt)
+                pred = model(X, y, src_pad_mask=pad_mask_src)
+
+
+                # Permute pred to have batch size first again
+                #pred = pred.permute(1, 2, 0)      
+                loss = loss_fn(pred, y)
+                total_loss += loss.detach().item()
+            
+        return total_loss / len(dataloader)
+    
+    def fit(model, opt, loss_fn, train_dataloader, val_dataloader, epochs):
+        """
+        Method from "A detailed guide to Pytorch's nn.Transformer() module.", by
+        Daniel Melchor: https://medium.com/@danielmelchor/a-detailed-guide-to-pytorchs-nn-transformer-module-c80afbc9ffb1
+        """
+        
+        # Used for plotting later on
+        train_loss_list, validation_loss_list = [], []
+        
+        print("Training and validating model")
+        for epoch in range(epochs):
+            print("-"*25, f"Epoch {epoch + 1}","-"*25)
+            
+            train_loss = train_loop(model, opt, loss_fn, train_dataloader)
+            train_loss_list += [train_loss]
+            
+            validation_loss = validation_loop(model, loss_fn, val_dataloader)
+            validation_loss_list += [validation_loss]
+            
+            print(f"Training loss: {train_loss:.4f}")
+            print(f"Validation loss: {validation_loss:.4f}")
+            print()
+            
+        return train_loss_list, validation_loss_list
     
 class CustomLoss(nn.Module):
     def __init__(self):
