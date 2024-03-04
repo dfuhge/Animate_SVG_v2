@@ -30,7 +30,7 @@ class PositionalEncoding(nn.Module):
         # Residual connection + pos encoding
         return self.dropout(token_embedding + self.pos_encoding[:token_embedding.size(0), :])
     
-class Transformer(nn.Module):
+class RewardTransformer(nn.Module):
     """
     Model from "A detailed guide to Pytorch's nn.Transformer() module.", by
     Daniel Melchor: https://medium.com/@danielmelchor/a-detailed-guide-to-pytorchs-nn-transformer-module-c80afbc9ffb1
