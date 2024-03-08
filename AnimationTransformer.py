@@ -169,7 +169,7 @@ def fit(model, optimizer, loss_function, train_dataloader, val_dataloader, epoch
     return train_loss_list, validation_loss_list
 
 
-def predict(model, source_sequence, sos_token: torch.Tensor, device, max_length=32, eos_scaling=1, backpropagate=False):
+def predict(model, source_sequence, sos_token: torch.Tensor, device, max_length=32, eos_scaling=1, backpropagate=False, showResult= True):
     if backpropagate:
         model.train()
     else:
@@ -223,9 +223,10 @@ def predict(model, source_sequence, sos_token: torch.Tensor, device, max_length=
         y_input = torch.cat((y_input, y_new.unsqueeze(0)), dim=0)
 
         # === INFO PRINT ===
-        print(f"{int(y_input.size(0))}: Path {closest_index} ({round(float(distances[closest_index]), 3)}) "
-              f"got animation {animation_type} ({round(float(type_softmax[animation_type]), 3)}%) "
-              f"with parameters {[round(num, 2) for num in pred_parameters.tolist()]}")
+        if showResult:
+            print(f"{int(y_input.size(0))}: Path {closest_index} ({round(float(distances[closest_index]), 3)}) "
+                f"got animation {animation_type} ({round(float(type_softmax[animation_type]), 3)}%) "
+                f"with parameters {[round(num, 2) for num in pred_parameters.tolist()]}")
 
         i += 1
 
