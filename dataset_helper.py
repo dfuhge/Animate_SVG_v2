@@ -207,7 +207,8 @@ def _generate_output_sequence(animation: pd.DataFrame,
         animation = animation.sample(frac=1).reset_index(drop=True)
         print("Note: Randomization not implemented yet")
 
-    animation.sort_values(by=['a13'], inplace=True)  # again ordered by time start.
+    # a13 not time anymore
+    # animation.sort_values(by=['a13'], inplace=True)  # again ordered by time start.
     animation.drop(columns=['file', 'filename'], inplace=True)
 
     # Append the EOS row to the DataFrame
