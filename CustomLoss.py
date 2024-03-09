@@ -1,8 +1,8 @@
 import torch
 from torch import nn, Tensor
 
-import dataset_helper
-from dataset_helper import unpack_embedding
+import prototype_dataset_helper as dataset_helper
+from prototype_dataset_helper import unpack_embedding
 
 
 class CustomEmbeddingSliceLoss(nn.Module):
