@@ -126,7 +126,7 @@ class Transformer(nn.Module):
             #print(X.shape, y.shape)
             pred = model(X, y, src_pad_mask=pad_mask_src)
 
-            print('Predictions: ',pred[:,:,:1])
+            #print('Predictions: ',pred[:,:,:1])
 
             # Permute pred to have batch size first again
             #pred = pred.permute(1, 2, 0)      
