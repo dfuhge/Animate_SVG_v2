@@ -9,17 +9,27 @@ import torch
 PADDING_VALUE = float('-100')
 
 ANIMATION_PARAMETER_INDICES = {
-    0: [],  # EOS
-    1: [0, 1, 6],  # translate
-    2: [2, 6],  # scale
-    3: [3, 6],
-    4: [4, 5, 6],
-    5: [6],
-    6: [6],
+    0: [0, 1],  # translate
+    1: [2],  # scale
+    2: [3],
+    3: [4, 5],
+    4: [],
+    5: [],
 }
+# Old:
+#
+# ANIMATION_PARAMETER_INDICES = {
+#     0: [],  # EOS
+#     1: [0, 1, 6],  # translate
+#     2: [2, 6],  # scale
+#     3: [3, 6],
+#     4: [4, 5, 6],
+#     5: [6],
+#     6: [6],
+# }
 
 
-def unpack_embedding(embedding: torch.Tensor, dim=0, device="cpu") -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+def unpack_embedding(embedding: torch.Tensor, dim=0, device="cpu") -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Args:
         device: cpu / gpu
@@ -35,22 +45,25 @@ def unpack_embedding(embedding: torch.Tensor, dim=0, device="cpu") -> tuple[torc
 
     if dim == 0:
         deep_svg = embedding[: -14].to(device)
-        types = embedding[-14: -7].to(device)
-        parameters = embedding[-7:].to(device)
+        types = embedding[-14: -8].to(device)
+        parameters = embedding[-8:-2].to(device)
+        eos = embedding[-2:].to(device)
 
     elif dim == 1:
         deep_svg = embedding[:, : -14].to(device)
-        types = embedding[:, -14: -7].to(device)
-        parameters = embedding[:, -7:].to(device)
+        types = embedding[:, -14: -8].to(device)
+        parameters = embedding[:, -8:-2].to(device)
+        eos = embedding[:, -2:].to(device)
 
     elif dim == 2:
         deep_svg = embedding[:, :, : -14].to(device)
-        types = embedding[:, :, -14: -7].to(device)
-        parameters = embedding[:, :, -7:].to(device)
+        types = embedding[:, :, -14: -8].to(device)
+        parameters = embedding[:, :, -8:-2].to(device)
+        eos = embedding[:, :, -2:].to(device)
 
     else:
         raise ValueError('Dimension > 2 not possible.')
-    return deep_svg, types, parameters
+    return deep_svg, types, parameters, eos
 
 
 def generate_dataset(dataframe_index: pd.DataFrame,
