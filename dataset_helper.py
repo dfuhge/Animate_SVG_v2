@@ -145,7 +145,8 @@ def _generate_input_sequence(logo_embeddings_used: pd.DataFrame,
     - Generation of padding
 
     Args:
-        logo_embeddings (pd.DataFrame): DataFrame containing logo embeddings.
+        logo_embeddings_used (pd.DataFrame): DataFrame containing logo embeddings: All used paths: minimum
+        logo_embeddings_unused (pd.DataFrame): DataFrame containing logo embeddings: Unused paths: Add as padding / noise
         null_features (int): Number of null features to add to each embedding.
         sequence_length (int): Target length for padding sequences.
         is_padding: if true, function adds padding
@@ -213,7 +214,7 @@ def _generate_output_sequence(animation: pd.DataFrame,
 
     # Append the EOS row to the DataFrame
     sos_eos_row = {col: 0 for col in animation.columns}
-    sos_eos_row["a0"] = 1
+    sos_eos_row["EOS_Y"] = 1
     sos_eos_row = pd.DataFrame([sos_eos_row])
     animation = pd.concat([sos_eos_row, animation, sos_eos_row],
                           ignore_index=True)
