@@ -78,7 +78,7 @@ def create_pad_mask(matrix: torch.tensor) -> torch.tensor:
 
         # Iterate over each element in the sequence and append True if padding value
         for j in range(0, matrix.size(1)):
-            sequence.append(matrix[i, j, 0] == dataset_helper.PADDING_VALUE)
+            sequence.append(matrix[i, j, 0] == prototype_dataset_helper.PADDING_VALUE)
 
         pad_masks.append(sequence)
 
@@ -132,7 +132,7 @@ def train_loop(model, opt, loss_function, dataloader, device):
                   f"Remaining {(total_expected - elapsed_time) / 60 : .2f} min ")
         i += 1
 
-    print(f">> Epoch time: {(time.time() - t0)/60:.2f} min")
+    print(f">> Epoch time: {(time.time() - t0) / 60:.2f} min")
     return total_loss / len(dataloader)
 
 
@@ -183,7 +183,7 @@ def predict(model, source_sequence, sos_token: torch.Tensor, device, max_length=
                            src_key_padding_mask=create_pad_mask(source_sequence.unsqueeze(0)).to(device))
 
         next_embedding = prediction[0, -1, :]  # prediction on last token
-        pred_deep_svg, pred_type, pred_parameters = dataset_helper.unpack_embedding(next_embedding, dim=0)
+        pred_deep_svg, pred_type, pred_parameters = prototype_dataset_helper.unpack_embedding(next_embedding, dim=0)
         pred_deep_svg, pred_type, pred_parameters = pred_deep_svg.to(device), pred_type.to(device), pred_parameters.to(
             device)
 
@@ -211,7 +211,7 @@ def predict(model, source_sequence, sos_token: torch.Tensor, device, max_length=
         # === PARAMETERS ===
         # overwrite unused parameters
         for j in range(len(pred_parameters)):
-            if j in dataset_helper.ANIMATION_PARAMETER_INDICES[int(animation_type)]:
+            if j in prototype_dataset_helper.ANIMATION_PARAMETER_INDICES[int(animation_type)]:
                 continue
             pred_parameters[j] = -1
 

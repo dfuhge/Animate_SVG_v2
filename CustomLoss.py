@@ -52,11 +52,11 @@ class CustomEmbeddingSliceLoss(nn.Module):
         loss_deep_svg = self.loss_function_deep_svg(input_deep_svg, target_deep_svg).to(device)
         loss_parameter = self.loss_function_parameter(input_parameters, target_parameters).to(device)
 
-        print(f"Loss: {self.weight_deep_svg * loss_deep_svg:.5f} === "
-              f"{self.weight_type * loss_type:.5f} === "
-              f"{self.weight_parameters * loss_parameter:.5f} === "
-              f"{self.weight_eos * loss_eos:.5f}"
-              )
+        # print(f"Loss: {self.weight_deep_svg * loss_deep_svg:.5f} === "
+        #       f"{self.weight_type * loss_type:.5f} === "
+        #       f"{self.weight_parameters * loss_parameter:.5f} === "
+        #       f"{self.weight_eos * loss_eos:.5f}"
+        #       )
 
         # Should roughly be balance 33% - 33% - 33%
         loss_overall = (self.weight_deep_svg * loss_deep_svg +
