@@ -6,7 +6,7 @@ from dataset_helper import unpack_embedding
 
 
 class CustomEmbeddingSliceLoss(nn.Module):
-    def __init__(self, weight_deep_svg=10, weight_type=0.1, weight_parameters=1):
+    def __init__(self, weight_deep_svg=1, weight_type=1, weight_parameters=1):
         super(CustomEmbeddingSliceLoss, self).__init__()
         # Loss functions
         self.loss_function_type = nn.CrossEntropyLoss(ignore_index=-1)

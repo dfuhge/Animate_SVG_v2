@@ -82,6 +82,7 @@ def create_pad_mask(matrix: torch.tensor) -> torch.tensor:
 
         pad_masks.append(sequence)
 
+    #print("matrix", matrix, matrix.shape, "pad_mask", pad_masks)
     return torch.tensor(pad_masks)
 
 
@@ -107,7 +108,7 @@ def _transformer_call_in_loops(model, batch, device, loss_function):
                        tgt_key_padding_mask=create_pad_mask(target_expected).to(device))
 
     return loss_function(prediction, target_expected, create_pad_mask(target_expected).to(device))
-
+    #return loss_function(prediction, target_expected)
 
 def train_loop(model, opt, loss_function, dataloader, device):
     model.train()

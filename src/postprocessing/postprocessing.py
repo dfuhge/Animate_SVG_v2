@@ -7,8 +7,8 @@ from xml.dom import minidom
 from collections import defaultdict
 
 sys.path.append(os.getcwd())
-from get_svg_size_pos import get_svg_bbox, get_path_bbox, get_midpoint_of_path_bbox
-from get_style_attributes import get_style_attributes_path
+from src.postprocessing.get_svg_size_pos import get_svg_bbox, get_path_bbox, get_midpoint_of_path_bbox
+from src.postprocessing.get_style_attributes import get_style_attributes_path
 
 random.seed(0)
 
@@ -259,10 +259,11 @@ def animate_logo(model_output: pd.DataFrame, logo_path: str):
     # Shift begin - TODO test
     min_b = np.inf
     for animation in total_animations:
-        if animation['begin'] < min_b:
-            min_b = animation['begin']
+        print(animation["begin"], min_b)
+        if float(animation["begin"]) < float(min_b):
+            min_b = animation["begin"]
     for animation in total_animations:
-        animation['begin'] = animation['begin'] - min_b
+        animation["begin"] = float(animation["begin"]) - float(min_b)
 
     _insert_animations(total_animations, logo_path, logo_path)
 
@@ -506,7 +507,7 @@ def _create_animate_motion_statement(animation_dict: dict):
     animation = f'animateMotion ' \
                 f'begin="{str(animation_dict["begin"])}" ' \
                 f'dur="{str(animation_dict["dur"])}" ' \
-                f'path="M{animation_dict["from"]}" Q{animation_dict['via']} {animation_dict['to']}' \
+                f'path="M{animation_dict["from"]}" Q{animation_dict["via"]} {animation_dict["to"]}' \
                 f'fill="{str(animation_dict["fill"])}" '\
                 'additive="sum"'
     return animation
