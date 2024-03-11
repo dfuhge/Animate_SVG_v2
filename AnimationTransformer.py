@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 
 import prototype_dataset_helper
-from CreativityLoss import CreativityLoss
+from CreativityLoss import CreativityLoss, add_result_dicts, print_dict
 
 
 class AnimationTransformer(nn.Module):
@@ -152,21 +152,19 @@ def validation_loop(model, loss_function, dataloader, device):
 
 def creativity_loop(model, dataloader, device):
     model.eval()
-    total_variance_batch = 0
-    total_variance_sequence = 0
+    var_dict = {}
 
     with torch.no_grad():
         for batch in dataloader:
             variances = _transformer_call_in_loops(model, batch, device, CreativityLoss())
-            total_variance_batch += variances[0]
-            total_variance_sequence += variances[1]
+            var_dict = add_result_dicts(variances, var_dict)
 
-    return total_variance_batch, total_variance_sequence
+    return var_dict
 
 
 def fit(model, optimizer, loss_function, train_dataloader, val_dataloader, epochs, device):
     train_loss_list, validation_loss_list = [], []
-    variance_batch_list, variance_sequence_list = [], []
+    variance_list = []
 
     print("Training and validating model")
     for epoch in range(epochs):
@@ -178,16 +176,15 @@ def fit(model, optimizer, loss_function, train_dataloader, val_dataloader, epoch
         validation_loss = validation_loop(model, loss_function, val_dataloader, device)
         validation_loss_list += [validation_loss]
 
-        variance_batch, variance_sequence = creativity_loop(model, val_dataloader, device)
-        variance_batch_list.append(variance_batch)
-        variance_sequence_list.append(variance_sequence)
+        variance = creativity_loop(model, val_dataloader, device)
+        variance_list.append(variance)
 
-        print(f"Variance per batch: {variance_batch:.9f} avg per seq: {variance_sequence:.9f}")
+        print_dict(variance)
         print(f"Training loss: {train_loss:.4f}")
         print(f"Validation loss: {validation_loss:.4f}")
         print()
 
-    return train_loss_list, validation_loss_list, variance_batch_list, variance_sequence_list
+    return train_loss_list, validation_loss_list, variance_list
 
 
 def predict(model, source_sequence, sos_token: torch.Tensor, device, max_length=32, eos_scaling=1):
