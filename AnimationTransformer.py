@@ -201,9 +201,9 @@ def predict(model, source_sequence, sos_token: torch.Tensor, device, max_length=
                            src_key_padding_mask=create_pad_mask(source_sequence.unsqueeze(0)).to(device))
 
         next_embedding = prediction[0, -1, :]  # prediction on last token
-        pred_deep_svg, pred_type, pred_parameters = prototype_dataset_helper.unpack_embedding(next_embedding, dim=0)
-        pred_deep_svg, pred_type, pred_parameters = pred_deep_svg.to(device), pred_type.to(device), pred_parameters.to(
-            device)
+        pred_deep_svg, pred_type, pred_parameters, pred_eos = prototype_dataset_helper.unpack_embedding(next_embedding, dim=0)
+        pred_deep_svg, pred_type, pred_parameters, pred_eos = pred_deep_svg.to(device), pred_type.to(device), pred_parameters.to(
+            device), pred_eos.to(device)
 
         # === TYPE ===
         # Apply Softmax

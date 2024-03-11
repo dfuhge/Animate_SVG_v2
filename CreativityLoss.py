@@ -29,6 +29,9 @@ class CreativityLoss(nn.Module):
         input_deep_svg, input_type, input_parameters, input_eos = unpack_embedding(input, dim=2, device=device)
         target_deep_svg, target_type, target_parameters, target_eos = unpack_embedding(target, dim=2, device=device)
 
+        input_type = torch.softmax(input_type, dim=2)
+        input_eos = torch.softmax(input_eos, dim=2)
+
         return {
             "batch_variance":
                 calc_variance(input).mean() / calc_variance(target).mean(),
