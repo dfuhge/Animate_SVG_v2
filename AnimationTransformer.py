@@ -188,6 +188,7 @@ def predict(model, source_sequence, sos_token: torch.Tensor, device, max_length=
 
         next_embedding = prediction[0, -1, :]  # prediction on last token
         pred_deep_svg, pred_type, pred_parameters = dataset_helper.unpack_embedding(next_embedding, dim=0)
+        #print(pred_deep_svg, pred_type, pred_parameters)
         pred_deep_svg, pred_type, pred_parameters = pred_deep_svg.to(device), pred_type.to(device), pred_parameters.to(
             device)
 

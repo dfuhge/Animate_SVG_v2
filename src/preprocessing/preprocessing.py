@@ -10,11 +10,11 @@ from svgpathtools import svg2paths2
 from svgpathtools import wsvg
 import sys
 sys.path.append(os.getcwd())
-from deepsvg.deepsvg_svglib.svg import SVG
-from deepsvg.deepsvg_config import config_hierarchical_ordered
-from deepsvg.deepsvg_utils import train_utils
-from deepsvg.deepsvg_utils import utils
-from deepsvg.deepsvg_dataloader import svg_dataset
+from src.preprocessing.deepsvg.deepsvg_svglib.svg import SVG
+from src.preprocessing.deepsvg.deepsvg_config import config_hierarchical_ordered
+from src.preprocessing.deepsvg.deepsvg_utils import train_utils
+from src.preprocessing.deepsvg.deepsvg_utils import utils
+from src.preprocessing.deepsvg.deepsvg_dataloader import svg_dataset
 
 # ---- Methods for embedding logos ----
 
@@ -109,6 +109,7 @@ def compute_embedding(path: str, model_path: str, save: str = None) -> pd.DataFr
             'start_pos': start_pos
         }
     metadata = pd.DataFrame(meta.values())
+    #print(metadata)
     if not os.path.exists('data/metadata'):
         os.mkdir('data/metadata')
     metadata.to_csv('data/metadata/metadata.csv', index=False)
@@ -123,9 +124,10 @@ def compute_embedding(path: str, model_path: str, save: str = None) -> pd.DataFr
     cfg.meta_filepath = 'data/metadata/metadata.csv'
     dataset = svg_dataset.load_dataset(cfg)
     svg_files = glob.glob('data/temp_svg/*.svg')
+    #print(svg_files)
     svg_list = []
     for svg_file in svg_files:
-        id = svg_file.split('_')[1].split('.')[0]
+        id = svg_file.split('\\')[1].split('_')[1].split('.')[0]
         # Preprocessing
         svg = SVG.load_svg(svg_file)
         svg = dataset.simplify(svg)
@@ -134,7 +136,7 @@ def compute_embedding(path: str, model_path: str, save: str = None) -> pd.DataFr
         # Get embedding
         model_args = utils.batchify((data[key] for key in cfg.model_args), device)
         with torch.no_grad():
-            z = model(*model_args, encode_mode=True).numpy()[0][0][0]
+            z = model(*model_args, encode_mode=True).cpu().numpy()[0][0][0]
         dict_data = {
             'animation_id': id,
             'embedding': z
@@ -152,4 +154,4 @@ def compute_embedding(path: str, model_path: str, save: str = None) -> pd.DataFr
     return data
 
 
-compute_embedding_folder('data/raw_dataset', 'src/preprocessing/deepsvg/deepsvg_models/deepSVG_hierarchical_ordered.pth.tar', 'data/embedding')
+#compute_embedding_folder('data/raw_dataset', 'src/preprocessing/deepsvg/deepsvg_models/deepSVG_hierarchical_ordered.pth.tar', 'data/embedding')
