@@ -77,7 +77,7 @@ def get_svg_bbox(file):
                 ymax_svg = ymax
         except:
             pass
-
+    
     return xmin_svg, xmax_svg, ymin_svg, ymax_svg
 
 

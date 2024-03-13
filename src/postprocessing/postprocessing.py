@@ -25,6 +25,7 @@ def animate_logo(model_output: pd.DataFrame, logo_path: str):
         animations_by_id[animation_id].append(output)
     total_animations = []
     for animation_id in animations_by_id.keys():
+        print(animation_id)
         path_xmin, path_xmax, path_ymin, path_ymax = get_path_bbox(logo_path, animation_id)
         xmin = logo_xmin - path_xmin
         xmax = logo_xmax - path_xmax
@@ -579,25 +580,25 @@ def randomly_animate_logo(logo_path: str, target_path: str, number_of_animations
     
 
 
-model_output = [
-    {
-        'animation_id': 1,
-        'model_output': [0, 0, 0, 0, 0, 0, 0, 1, 1, 10, 3, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10]
-    },
-    {
-        'animation_id': 1,
-        'model_output': [0, 0, 0, 0, 0, 0, 0, 1, 5, 3, 4, 5, 2, 1, 2, 3, 4, 5, 6, 7, 1000, 20]
-    }
-]
-model_output = pd.DataFrame(model_output)
-#print(model_output)
-path = 'src/postprocessing/logo_0.svg'
-# Assign animation id to every path - TODO this changes the original logo!
-document = minidom.parse(path)
-paths = document.getElementsByTagName('path')
-for i in range(len(paths)):
-    paths[i].setAttribute('animation_id', str(i))
-with open(path, 'wb') as svg_file:
-    svg_file.write(document.toxml(encoding='iso-8859-1'))
-#print('Inserted animation id')
-animate_logo(model_output, path)
+# model_output = [
+#     {
+#         'animation_id': 1,
+#         'model_output': [0, 0, 0, 0, 0, 0, 0, 1, 1, 10, 3, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10]
+#     },
+#     {
+#         'animation_id': 1,
+#         'model_output': [0, 0, 0, 0, 0, 0, 0, 1, 5, 3, 4, 5, 2, 1, 2, 3, 4, 5, 6, 7, 1000, 20]
+#     }
+# ]
+# model_output = pd.DataFrame(model_output)
+# #print(model_output)
+# path = 'src/postprocessing/logo_0.svg'
+# # Assign animation id to every path - TODO this changes the original logo!
+# document = minidom.parse(path)
+# paths = document.getElementsByTagName('path')
+# for i in range(len(paths)):
+#     paths[i].setAttribute('animation_id', str(i))
+# with open(path, 'wb') as svg_file:
+#     svg_file.write(document.toxml(encoding='iso-8859-1'))
+# #print('Inserted animation id')
+# animate_logo(model_output, path)

@@ -1,4 +1,5 @@
 from src.preprocessing.preprocessing import compute_embedding
+from src.postprocessing.postprocessing import animate_logo
 from AnimationTransformer import AnimationTransformer
 from AnimationTransformer import predict
 import torch.nn as torch
@@ -39,6 +40,11 @@ def animateLogo(path : str):
     sos_token = torch.zeros(282)
     sos_token[256] = 1
     result = predict(model, inp, sos_token=sos_token, device=device, max_length=inp.shape[0], eos_scaling=1)
+    result = pd.DataFrame(result[1:, -26:].cpu().detach().numpy())
+    result = pd.DataFrame({"model_output" : [row.tolist() for index, row in result.iterrows()]})
+    result["animation_id"] = range(len(result))
+    print(result, path)
+    animate_logo(result, path)
 
-logo = "data/examples/logo_168.svg"
+logo = "data/examples/logo_181.svg"
 animateLogo(logo)
