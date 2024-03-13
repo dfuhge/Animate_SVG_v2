@@ -55,6 +55,7 @@ class CreativityLoss(nn.Module):
                 avg_sequence_variance(input_eos) / avg_sequence_variance(target_eos)
         }
 
+
 def calc_variance(tensor: Tensor) -> Tensor:
     """Calculate variance of tensor, ignoring NaN values."""
     # Mean of non-NaN values
@@ -80,6 +81,7 @@ def add_result_dicts(dictionary1: dict, dictionary2: dict):
         if key in dictionary1:
             dictionary1[key] += value
     return dictionary1
+
 
 def print_dict(dictionary: dict):
     print(f"bth var: {dictionary['batch_variance']:.9f} / "

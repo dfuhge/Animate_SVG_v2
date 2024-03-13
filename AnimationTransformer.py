@@ -187,7 +187,7 @@ def fit(model, optimizer, loss_function, train_dataloader, val_dataloader, epoch
     return train_loss_list, validation_loss_list, variance_list
 
 
-def predict(model, source_sequence, sos_token: torch.Tensor, device, max_length=32, eos_scaling=1):
+def predict(model, source_sequence, sos_token: torch.Tensor, device, max_length=32, eos_threshold=0.5, silent=False):
     model.eval()
 
     source_sequence = source_sequence.float().to(device)
@@ -201,23 +201,26 @@ def predict(model, source_sequence, sos_token: torch.Tensor, device, max_length=
                            src_key_padding_mask=create_pad_mask(source_sequence.unsqueeze(0)).to(device))
 
         next_embedding = prediction[0, -1, :]  # prediction on last token
-        pred_deep_svg, pred_type, pred_parameters, pred_eos = prototype_dataset_helper.unpack_embedding(next_embedding, dim=0)
-        pred_deep_svg, pred_type, pred_parameters, pred_eos = pred_deep_svg.to(device), pred_type.to(device), pred_parameters.to(
+        pred_deep_svg, pred_type, pred_parameters, pred_eos = prototype_dataset_helper.unpack_embedding(next_embedding,
+                                                                                                        dim=0)
+        pred_deep_svg, pred_type, pred_parameters, pred_eos = pred_deep_svg.to(device), pred_type.to(
+            device), pred_parameters.to(
             device), pred_eos.to(device)
 
-        # === TYPE ===
-        # Apply Softmax
+        # === SOFTMAX ===
         type_softmax = torch.softmax(pred_type, dim=0)
-        type_softmax[0] = type_softmax[0] * eos_scaling  # Reduce EOS
         animation_type = torch.argmax(type_softmax, dim=0)
 
+        eos_softmax = torch.softmax(pred_eos, dim=0)
+        if not silent: print(f"EOS: {eos_softmax[1] * 100:.1f}%")
+
         # Break if EOS is most likely
-        if animation_type == 0:
-            print("END OF ANIMATION")
+        if eos_softmax[1] > eos_threshold:
+            if not silent: print("END OF ANIMATION")
             y_input = torch.cat((y_input, sos_token.unsqueeze(0).to(device)), dim=0)
             return y_input
 
-        pred_type = torch.zeros(7)
+        pred_type = torch.zeros(6)
         pred_type[animation_type] = 1
 
         # === DEEP SVG ===
@@ -234,13 +237,18 @@ def predict(model, source_sequence, sos_token: torch.Tensor, device, max_length=
             pred_parameters[j] = -1
 
         # === SEQUENCE ===
-        y_new = torch.concat([closest_token[:-14], pred_type.to(device), pred_parameters], dim=0)
+        y_new = torch.concat([closest_token[:-14],
+                              pred_type.to(device),
+                              pred_parameters,
+                              torch.tensor([1, 0]).to(device)],
+                             dim=0)
         y_input = torch.cat((y_input, y_new.unsqueeze(0)), dim=0)
 
         # === INFO PRINT ===
-        print(f"{int(y_input.size(0))}: Path {closest_index} ({round(float(distances[closest_index]), 3)}) "
-              f"got animation {animation_type} ({round(float(type_softmax[animation_type]), 3)}%) "
-              f"with parameters {[round(num, 2) for num in pred_parameters.tolist()]}")
+        if not silent:
+            print(f"{int(y_input.size(0))}: Path {closest_index} ({round(float(distances[closest_index]), 3)}) "
+                  f"got animation {animation_type} ({round(float(type_softmax[animation_type]), 3)}%) "
+                  f"with parameters {[round(num, 2) for num in pred_parameters.tolist()]}")
 
         i += 1
 
