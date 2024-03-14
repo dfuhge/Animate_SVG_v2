@@ -5,6 +5,25 @@ import prototype_dataset_helper as dataset_helper
 from prototype_dataset_helper import unpack_embedding
 
 
+def _ignore_values_when_target_is_eos(input: Tensor, target: Tensor) -> Tensor:
+    """
+    Ignores parameters that are not related to EOS when EOS is in target sequence, to avoid a backpropagation to 0.
+    Assumes that the last two features are EOS_NO and EOS_YES, one-hot encoded with all other elements in the target
+    sequence set to 0. Then the target sequence equals the input sequence after the execution of this function.
+
+    Args:
+        input: tensor of shape [batch_size, sequence_length, num_features]
+        target: tensor of shape [batch_size, sequence_length, num_features]
+    """
+    # Check where the last feature of the target is 1
+    condition_mask = (target[..., -2] == 1).unsqueeze(-1).to(input.device)
+
+    # Multiply all but the last two feature of input by 0/1 Mask
+    input[..., :-2] *= condition_mask
+
+    return input
+
+
 class CustomEmbeddingSliceLoss(nn.Module):
     def __init__(self, weight_deep_svg=10, weight_type=0.1, weight_parameters=10, weight_eos=0.2):
         super(CustomEmbeddingSliceLoss, self).__init__()
@@ -34,6 +53,9 @@ class CustomEmbeddingSliceLoss(nn.Module):
                 Returns: Combined loss
 
                 """
+        # ignore part of input sequence, when target sequence is EOS
+        input = _ignore_values_when_target_is_eos(input, target)
+
         # Expand target_padding_mask to match the shape of 'input' and set padding positions to -100 in 'input'
         expanded_mask = target_padding_mask.unsqueeze(-1).expand_as(input).to(device)
         input[expanded_mask] = -100
@@ -52,13 +74,13 @@ class CustomEmbeddingSliceLoss(nn.Module):
         loss_deep_svg = self.loss_function_deep_svg(input_deep_svg, target_deep_svg).to(device)
         loss_parameter = self.loss_function_parameter(input_parameters, target_parameters).to(device)
 
-        # print(f"Loss: {self.weight_deep_svg * loss_deep_svg:.5f} === "
-        #       f"{self.weight_type * loss_type:.5f} === "
-        #       f"{self.weight_parameters * loss_parameter:.5f} === "
-        #       f"{self.weight_eos * loss_eos:.5f}"
-        #       )
+        print(f"Loss: {self.weight_deep_svg * loss_deep_svg:.5f} === "
+              f"{self.weight_type * loss_type:.5f} === "
+              f"{self.weight_parameters * loss_parameter:.5f} === "
+              f"{self.weight_eos * loss_eos:.5f}"
+              )
 
-        # Should roughly be balance 33% - 33% - 33%
+        # Should roughly be balance
         loss_overall = (self.weight_deep_svg * loss_deep_svg +
                         self.weight_eos * loss_eos +
                         self.weight_type * loss_type +
