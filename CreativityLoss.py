@@ -83,6 +83,12 @@ def add_result_dicts(dictionary1: dict, dictionary2: dict):
     return dictionary1
 
 
+def divide_values_by(dictionary: dict, divider: int):
+    for key, value in dictionary.items():
+        dictionary[key] = value / divider
+    return dictionary
+
+
 def print_dict(dictionary: dict):
     print(f"bth var: {dictionary['batch_variance']:.9f} / "
           f"seq var: {dictionary['sequence_variance']:.9f}")

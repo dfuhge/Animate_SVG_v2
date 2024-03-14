@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 
 import prototype_dataset_helper
-from CreativityLoss import CreativityLoss, add_result_dicts, print_dict
+from CreativityLoss import CreativityLoss, add_result_dicts, print_dict, divide_values_by
 
 
 class AnimationTransformer(nn.Module):
@@ -159,7 +159,7 @@ def creativity_loop(model, dataloader, device):
             variances = _transformer_call_in_loops(model, batch, device, CreativityLoss())
             var_dict = add_result_dicts(variances, var_dict)
 
-    return var_dict
+    return divide_values_by(var_dict, len(dataloader))
 
 
 def fit(model, optimizer, loss_function, train_dataloader, val_dataloader, epochs, device):
