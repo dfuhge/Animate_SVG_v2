@@ -8,9 +8,9 @@ import pandas as pd
 
 def animateLogo(path : str):
     #transformer
-    NUM_HEADS = 6 # Dividers of 282: {1, 2, 3, 6, 47, 94, 141, 282}
+    NUM_HEADS = 47 # Dividers of 282: {1, 2, 3, 6, 47, 94, 141, 282}
     NUM_ENCODER_LAYERS = 2
-    NUM_DECODER_LAYERS = 8
+    NUM_DECODER_LAYERS = 6
     DROPOUT=0.1
     # CONSTANTS
     FEATURE_DIM = 282
@@ -46,5 +46,5 @@ def animateLogo(path : str):
     print(result, path)
     animate_logo(result, path)
 
-logo = "data/examples/logo_181.svg"
+logo = "data/examples/logo_440.svg"
 animateLogo(logo)
