@@ -171,7 +171,7 @@ def _generate_input_sequence(logo_embeddings_used: pd.DataFrame,
     logo_embeddings_unused.drop(columns=['filename', 'animation_id'], inplace=True)
 
     # Combine used and unused. Fill used with random unused samples
-    logo_embeddings = logo_embeddings_unused
+    logo_embeddings = logo_embeddings_used
     remaining_slots = sequence_length - len(logo_embeddings)
     if remaining_slots > 0:
         sample_size = min(len(logo_embeddings_unused), remaining_slots)
