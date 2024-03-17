@@ -1,0 +1,7 @@
+
+*.pth filter=lfs diff=lfs merge=lfs -text
+data/*.pth filter=lfs diff=lfs merge=lfs -text
+*.txt filter=lfs diff=lfs merge=lfs -text
+*.txt filter=lfs diff=lfs merge=lfs -text
+
+
