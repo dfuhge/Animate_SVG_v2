@@ -23,7 +23,6 @@ class AnimationTransformer(nn.Module):
         self.model_type = "Transformer"
         self.dim_model = dim_model
 
-        # TODO: Currently left out, as input sequence shuffled. Later check if use is beneficial.
         self.use_positional_encoder = use_positional_encoder
         self.positional_encoder = PositionalEncoding(
             dim_model=dim_model,
@@ -162,7 +161,7 @@ def creativity_loop(model, dataloader, device):
     return divide_values_by(var_dict, len(dataloader))
 
 
-def fit(model, optimizer, loss_function, train_dataloader, val_dataloader, epochs, device):
+def fit(model, optimizer, loss_function_train, loss_function_val, train_dataloader, val_dataloader, epochs, device):
     train_loss_list, validation_loss_list = [], []
     variance_list = []
 
@@ -170,10 +169,10 @@ def fit(model, optimizer, loss_function, train_dataloader, val_dataloader, epoch
     for epoch in range(epochs):
         print("-" * 25, f"Epoch {epoch + 1}", "-" * 25)
 
-        train_loss = train_loop(model, optimizer, loss_function, train_dataloader, device)
+        train_loss = train_loop(model, optimizer, loss_function_train, train_dataloader, device)
         train_loss_list += [train_loss]
 
-        validation_loss = validation_loop(model, loss_function, val_dataloader, device)
+        validation_loss = validation_loop(model, loss_function_val, val_dataloader, device)
         validation_loss_list += [validation_loss]
 
         variance = creativity_loop(model, val_dataloader, device)
