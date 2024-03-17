@@ -27,6 +27,9 @@ def _ignore_values_when_target_is_eos(input: Tensor, target: Tensor) -> Tensor:
 class CustomEmbeddingSliceLoss(nn.Module):
     def __init__(self, weight_deep_svg=10, weight_type=0.1, weight_parameters=10, weight_eos=0.2):
         super(CustomEmbeddingSliceLoss, self).__init__()
+        # Constants
+        self.PADDING_VALUE = dataset_helper.PADDING_VALUE
+        self.ANIMATION_PARAMETER_INDICES = dataset_helper.ANIMATION_PARAMETER_INDICES
         # Loss functions
         self.loss_function_type = nn.CrossEntropyLoss(ignore_index=-1)
         self.loss_function_eos = nn.CrossEntropyLoss(ignore_index=-1)
@@ -37,9 +40,6 @@ class CustomEmbeddingSliceLoss(nn.Module):
         self.weight_type = weight_type
         self.weight_parameters = weight_parameters
         self.weight_eos = weight_eos
-        # Constants
-        self.PADDING_VALUE = dataset_helper.PADDING_VALUE
-        self.ANIMATION_PARAMETER_INDICES = dataset_helper.ANIMATION_PARAMETER_INDICES
 
     def forward(self, input: Tensor, target: Tensor, target_padding_mask: Tensor, device="cpu") -> Tensor:
         """
@@ -56,9 +56,9 @@ class CustomEmbeddingSliceLoss(nn.Module):
         # ignore part of input sequence, when target sequence is EOS
         input = _ignore_values_when_target_is_eos(input, target)
 
-        # Expand target_padding_mask to match the shape of 'input' and set padding positions to -100 in 'input'
+        # Expand target_padding_mask to match the shape of 'input' and set padding positions to -100 (padding value)
         expanded_mask = target_padding_mask.unsqueeze(-1).expand_as(input).to(device)
-        input[expanded_mask] = -100
+        input[expanded_mask] = self.PADDING_VALUE
 
         # Slice embedding into sections
         input_deep_svg, input_type, input_parameters, input_eos = unpack_embedding(input, dim=2, device=device)
