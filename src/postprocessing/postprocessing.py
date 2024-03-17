@@ -15,6 +15,16 @@ random.seed(0)
 filter_id = 0
 
 def animate_logo(model_output: pd.DataFrame, logo_path: str):
+    # Assign animation id to every path - TODO this changes the original logo!
+    document = minidom.parse(logo_path)
+    paths = document.getElementsByTagName('path')
+    for i in range(len(paths)):
+        paths[i].setAttribute('animation_id', str(i))
+    with open(logo_path, 'wb') as svg_file:
+        svg_file.write(document.toxml(encoding='iso-8859-1'))
+
+
+
     logo_xmin, logo_xmax, logo_ymin, logo_ymax = get_svg_bbox(logo_path)
     # ---- Normalize model output ----
     animations_by_id = defaultdict(list)
@@ -79,9 +89,14 @@ def animate_logo(model_output: pd.DataFrame, logo_path: str):
                 # Get general parameters
                 begin = animations_by_type[animation_type][i][10]
                 dur = animations_by_type[animation_type][i][10]
+
+                if dur < 1:
+                    dur = 1
+                    
                 # Check type and call method
                 if animation_type == 1:
                     # animation: translate
+                    print("translate")
                     from_x = animations_by_type[animation_type][i][12]
                     from_y = animations_by_type[animation_type][i][13]
                     # Check if there is a next translate animation
@@ -220,6 +235,21 @@ def animate_logo(model_output: pd.DataFrame, logo_path: str):
                     current_animations.append(_animation_skewY(animation_id, begin, dur, from_y, to_y))
                 elif animation_type == 7:
                     # animation: fill
+                    if animations_by_type[animation_type][i][20] > 256:
+                        animations_by_type[animation_type][i][20] = 256
+                    elif animations_by_type[animation_type][i][20] < 0:
+                        animations_by_type[animation_type][i][20] = 0
+                    
+                    if animations_by_type[animation_type][i][21] > 256:
+                        animations_by_type[animation_type][i][21] = 256
+                    elif animations_by_type[animation_type][i][21] < 0:
+                        animations_by_type[animation_type][i][21] = 0
+                    
+                    if animations_by_type[animation_type][i][22] > 256:
+                        animations_by_type[animation_type][i][22] = 256
+                    elif animations_by_type[animation_type][i][22] < 0:
+                        animations_by_type[animation_type][i][22] = 0
+
                     from_rgb = '#' + _convert_to_hex_str(animations_by_type[animation_type][i][20]) + _convert_to_hex_str(animations_by_type[animation_type][i][21]) + _convert_to_hex_str(animations_by_type[animation_type][i][22])
                     # Check if there is a next fill animation
                     if i < len(animations_by_type[animation_type]) - 1:

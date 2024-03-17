@@ -15,6 +15,7 @@ from src.preprocessing.deepsvg.deepsvg_config import config_hierarchical_ordered
 from src.preprocessing.deepsvg.deepsvg_utils import train_utils
 from src.preprocessing.deepsvg.deepsvg_utils import utils
 from src.preprocessing.deepsvg.deepsvg_dataloader import svg_dataset
+import shutil
 
 # ---- Methods for embedding logos ----
 
@@ -151,6 +152,25 @@ def compute_embedding(path: str, model_path: str, save: str = None) -> pd.DataFr
         pickle.dump(data, output)
         output.close()
     print('Embedding computed')
+
+        ### I added the lines below!!!! - Nami
+
+    #refresh temp_svg and metadata for every logo
+    directory_to_delete = 'data/temp_svg'
+
+    try:
+        shutil.rmtree(directory_to_delete)
+        #print(f"Directory '{directory_to_delete}' successfully deleted.")
+    except OSError as e:
+        print(f"Error: {directory_to_delete} : {e.strerror}")
+
+    directory_to_delete = 'data/metadata'
+
+    try:
+        shutil.rmtree(directory_to_delete)
+        #print(f"Directory '{directory_to_delete}' successfully deleted.")
+    except OSError as e:
+        print(f"Error: {directory_to_delete} : {e.strerror}")
     return data
 
 

@@ -178,26 +178,29 @@ def predict(model, source_sequence, sos_token: torch.Tensor, device, max_length=
 
     source_sequence = source_sequence.float().to(device)
     y_input = torch.unsqueeze(sos_token, dim=0).float().to(device)
-
+    print(source_sequence, source_sequence.unsqueeze(0))
     i = 0
     while i < max_length:
         # Get source mask
+        #print(y_input, y_input.unsqueeze(0))
         prediction = model(source_sequence.unsqueeze(0), y_input.unsqueeze(0),  # un-squeeze for batch
                            # tgt_mask=get_tgt_mask(y_input.size(0)).to(device),
                            src_key_padding_mask=create_pad_mask(source_sequence.unsqueeze(0)).to(device))
-
         next_embedding = prediction[0, -1, :]  # prediction on last token
+        
         pred_deep_svg, pred_type, pred_parameters = dataset_helper.unpack_embedding(next_embedding, dim=0)
         #print(pred_deep_svg, pred_type, pred_parameters)
         pred_deep_svg, pred_type, pred_parameters = pred_deep_svg.to(device), pred_type.to(device), pred_parameters.to(
             device)
+        print(pred_type)
 
         # === TYPE ===
         # Apply Softmax
         type_softmax = torch.softmax(pred_type, dim=0)
+        print(type_softmax)
         type_softmax[0] = type_softmax[0] * eos_scaling  # Reduce EOS
         animation_type = torch.argmax(type_softmax, dim=0)
-
+        print(animation_type)
         # Break if EOS is most likely
         if animation_type == 0:
             print("END OF ANIMATION")
@@ -222,6 +225,7 @@ def predict(model, source_sequence, sos_token: torch.Tensor, device, max_length=
 
         # === SEQUENCE ===
         y_new = torch.concat([closest_token[:-26], pred_type.to(device), pred_parameters], dim=0)
+        #y_new = torch.concat([pred_deep_svg, pred_type.to(device), pred_parameters], dim=0)
         y_input = torch.cat((y_input, y_new.unsqueeze(0)), dim=0)
 
         # === INFO PRINT ===
