@@ -35,11 +35,11 @@ def download_image_from_link(filename, link):
 
 
 def download_images(img_numbers):
-    with open('src/data_scraper/results.txt') as f:
+    with open('src/data_scraper/results_shuffled.txt') as f:
         i = 0
         for line in f:
-            if i in img_numbers:
-                download_image_from_link(line)
+            if i < img_numbers:
+                download_image_from_link(line.split(';')[0], line.split(';')[1])
             i += 1
 
 # Adjust these numbers to get a different range and size of samples
