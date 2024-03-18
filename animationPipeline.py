@@ -5,13 +5,37 @@ from AnimationTransformer import predict
 import torch.nn as torch
 import torch
 import pandas as pd
+import shutil
+import os
 
-def animateLogo(path : str, targetPath : str):
+def animateLogo(path : str):
+
+    if not os.path.exists(path):
+        print("The original file does not exist.")
+        return None
+    
+    # Extract the filename and extension
+    filename, extension = os.path.splitext(os.path.basename(path))
+    
+    # Construct the new filename with "_animated" attached
+    new_filename = filename + "_animated" + extension
+    
+    # Construct the path for the new file
+    targetPath = os.path.join(os.path.dirname(path), new_filename)
+    
+    try:
+        # Copy the original file to the new location with the new filename
+        shutil.copyfile(path, targetPath)
+        print(f"File copied and renamed to {new_filename}")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+
     #transformer
     NUM_HEADS = 47 # Dividers of 282: {1, 2, 3, 6, 47, 94, 141, 282}
-    NUM_ENCODER_LAYERS = 2
+    NUM_ENCODER_LAYERS = 6
     NUM_DECODER_LAYERS = 4
-    DROPOUT=0.2
+    DROPOUT=0.21
     # CONSTANTS
     FEATURE_DIM = 282
 
@@ -41,13 +65,12 @@ def animateLogo(path : str, targetPath : str):
 
     sos_token = torch.zeros(282)
     sos_token[256] = 1
-    result = predict(model, inp, sos_token=sos_token, device=device, max_length=inp.shape[0], eos_scaling=0.1)
+    result = predict(model, inp, sos_token=sos_token, device=device, max_length=inp.shape[0], eos_scaling=0.5, temperature=1000000)
     result = pd.DataFrame(result[1:, -26:].cpu().detach().numpy())
     result = pd.DataFrame({"model_output" : [row.tolist() for index, row in result.iterrows()]})
     result["animation_id"] = range(len(result))
     #print(result, path)
-    animate_logo(result, target)
+    animate_logo(result, targetPath)
 
-logo = "data/examples/c.svg"
-target = "data/examples/c_animated.svg"
-animateLogo(logo, target)
+logo = "data/examples/sariyer.svg"
+animateLogo(logo)

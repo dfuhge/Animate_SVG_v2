@@ -4,7 +4,10 @@ import time
 import torch
 import torch.nn as nn
 
+import random
+
 import dataset_helper
+from CreativityLoss import CreativityLoss, add_result_dicts, print_dict
 
 
 class AnimationTransformer(nn.Module):
@@ -149,36 +152,56 @@ def validation_loop(model, loss_function, dataloader, device):
 
     return total_loss / len(dataloader)
 
+def creativity_loop(model, dataloader, device):
+    model.eval()
+    var_dict = {}
 
-def fit(model, optimizer, loss_function, train_dataloader, val_dataloader, epochs, device):
+    with torch.no_grad():
+        for batch in dataloader:
+            variances = _transformer_call_in_loops(model, batch, device, CreativityLoss())
+            var_dict = add_result_dicts(variances, var_dict)
+
+    return var_dict
+
+def fit(model, optimizer, loss_function_train, loss_function_val, train_dataloader, val_dataloader, epochs, device):
     train_loss_list, validation_loss_list = [], []
+    variance_list = []
 
     print("Training and validating model")
     for epoch in range(epochs):
         print("-" * 25, f"Epoch {epoch + 1}", "-" * 25)
 
-        train_loss = train_loop(model, optimizer, loss_function, train_dataloader, device)
+        train_loss = train_loop(model, optimizer, loss_function_train, train_dataloader, device)
         train_loss_list += [train_loss]
 
-        validation_loss = validation_loop(model, loss_function, val_dataloader, device)
+        validation_loss = validation_loop(model, loss_function_val, val_dataloader, device)
         validation_loss_list += [validation_loss]
 
+        variance = creativity_loop(model, val_dataloader, device)
+        variance_list.append(variance)
+
+        print_dict(variance)
         print(f"Training loss: {train_loss:.4f}")
         print(f"Validation loss: {validation_loss:.4f}")
         print()
 
-    return train_loss_list, validation_loss_list
+    return train_loss_list, validation_loss_list, variance_list
 
 
-def predict(model, source_sequence, sos_token: torch.Tensor, device, max_length=32, eos_scaling=1, backpropagate=False, showResult= True):
+def predict(model, source_sequence, sos_token: torch.Tensor, device, max_length=32, eos_scaling=1, backpropagate=False, showResult= True, temperature=1):
     if backpropagate:
         model.train()
     else:
         model.eval()
 
+    from tensorboardX import SummaryWriter
+
+    # Create a SummaryWriter instance
+    writer = SummaryWriter()    
+
     source_sequence = source_sequence.float().to(device)
     y_input = torch.unsqueeze(sos_token, dim=0).float().to(device)
-    print(source_sequence, source_sequence.unsqueeze(0))
+    #print(source_sequence, source_sequence.unsqueeze(0))
     i = 0
     while i < max_length:
         # Get source mask
@@ -186,21 +209,25 @@ def predict(model, source_sequence, sos_token: torch.Tensor, device, max_length=
         prediction = model(source_sequence.unsqueeze(0), y_input.unsqueeze(0),  # un-squeeze for batch
                            # tgt_mask=get_tgt_mask(y_input.size(0)).to(device),
                            src_key_padding_mask=create_pad_mask(source_sequence.unsqueeze(0)).to(device))
+        writer.add_graph(model, (source_sequence.unsqueeze(0), y_input.unsqueeze(0)))
         next_embedding = prediction[0, -1, :]  # prediction on last token
         
         pred_deep_svg, pred_type, pred_parameters = dataset_helper.unpack_embedding(next_embedding, dim=0)
         #print(pred_deep_svg, pred_type, pred_parameters)
         pred_deep_svg, pred_type, pred_parameters = pred_deep_svg.to(device), pred_type.to(device), pred_parameters.to(
             device)
-        print(pred_type)
+
+        pred_type = pred_type / temperature
 
         # === TYPE ===
         # Apply Softmax
         type_softmax = torch.softmax(pred_type, dim=0)
-        print(type_softmax)
         type_softmax[0] = type_softmax[0] * eos_scaling  # Reduce EOS
-        animation_type = torch.argmax(type_softmax, dim=0)
-        print(animation_type)
+
+        indices = torch.argsort(type_softmax, descending=True)
+        animation_type = random.choice(indices[:3])
+        #animation_type = torch.argmax(type_softmax, dim=0)
+
         # Break if EOS is most likely
         if animation_type == 0:
             print("END OF ANIMATION")
@@ -235,6 +262,9 @@ def predict(model, source_sequence, sos_token: torch.Tensor, device, max_length=
                 f"with parameters {[round(num, 2) for num in pred_parameters.tolist()]}")
 
         i += 1
+    
+    # Close the writer
+    writer.close()
 
     return y_input
 
