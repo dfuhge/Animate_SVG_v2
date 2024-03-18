@@ -178,8 +178,12 @@ def fit(model, optimizer, loss_function_train, loss_function_val, train_dataload
         variance = creativity_loop(model, val_dataloader, device)
         variance_list.append(variance)
 
-        print_dict(variance)
+        val_loss_on_train = validation_loop(model, loss_function_val, train_dataloader, device)
+        variance_list[-1]["val_loss_on_train"] = val_loss_on_train
+
+        # print_dict(variance)
         print(f"Training loss: {train_loss:.4f}")
+        print(f"Val loss on train data: {val_loss_on_train:.4f}")
         print(f"Validation loss: {validation_loss:.4f}")
         print()
 
