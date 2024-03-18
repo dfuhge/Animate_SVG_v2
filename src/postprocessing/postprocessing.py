@@ -35,7 +35,7 @@ def animate_logo(model_output: pd.DataFrame, logo_path: str):
         animations_by_id[animation_id].append(output)
     total_animations = []
     for animation_id in animations_by_id.keys():
-        print(animation_id)
+        #print(animation_id)
         path_xmin, path_xmax, path_ymin, path_ymax = get_path_bbox(logo_path, animation_id)
         xmin = logo_xmin - path_xmin
         xmax = logo_xmax - path_xmax
