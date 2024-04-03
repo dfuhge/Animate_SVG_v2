@@ -36,7 +36,10 @@ def animate_logo(model_output: pd.DataFrame, logo_path: str):
     total_animations = []
     for animation_id in animations_by_id.keys():
         #print(animation_id)
-        path_xmin, path_xmax, path_ymin, path_ymax = get_path_bbox(logo_path, animation_id)
+        try:
+            path_xmin, path_xmax, path_ymin, path_ymax = get_path_bbox(logo_path, animation_id)
+        except:
+            path_xmin, path_xmax, path_ymin, path_ymax = 0, 0, 0, 0
         xmin = logo_xmin - path_xmin
         xmax = logo_xmax - path_xmax
         ymin = logo_ymin - path_ymin
@@ -97,13 +100,13 @@ def animate_logo(model_output: pd.DataFrame, logo_path: str):
                 if animation_type == 1:
                     # animation: translate
                     print("translate")
-                    from_x = animations_by_type[animation_type][i][12]
-                    from_y = animations_by_type[animation_type][i][13]
+                    from_x = int(animations_by_type[animation_type][i][12])
+                    from_y = int(animations_by_type[animation_type][i][13])
                     # Check if there is a next translate animation
                     if i < len(animations_by_type[animation_type]) - 1:
                         # animation endpoint is next translate animation's starting point
-                        to_x = animations_by_type[animation_type][i+1][12]
-                        to_y = animations_by_type[animation_type][i+1][13]
+                        to_x = int(animations_by_type[animation_type][i+1][12])
+                        to_y = int(animations_by_type[animation_type][i+1][13])
                     else:
                         # animation endpoint is final position of object
                         to_x = 0
@@ -129,15 +132,15 @@ def animate_logo(model_output: pd.DataFrame, logo_path: str):
                     current_animations.append(_animation_translate(animation_id, begin, dur, from_x, from_y, to_x, to_y))
                 elif animation_type == 2:
                     print('curve')
-                    from_x = animations_by_type[animation_type][i][12]
-                    from_y = animations_by_type[animation_type][i][13]
-                    via_x = animations_by_type[animation_type][i][14]
-                    via_y = animations_by_type[animation_type][i][15]
+                    from_x = int(animations_by_type[animation_type][i][12])
+                    from_y = int(animations_by_type[animation_type][i][13])
+                    via_x = int(animations_by_type[animation_type][i][14])
+                    via_y = int(animations_by_type[animation_type][i][15])
                     # Check if there is a next curve animation
                     if i < len(animations_by_type[animation_type]) - 1:
                         # animation endpoint is next curve animation's starting point
-                        to_x = animations_by_type[animation_type][i+1][12]
-                        to_y = animations_by_type[animation_type][i+1][13]
+                        to_x = int(animations_by_type[animation_type][i+1][12])
+                        to_y = int(animations_by_type[animation_type][i+1][13])
                     else:
                         # animation endpoint is final position of object
                         to_x = 0
@@ -172,6 +175,8 @@ def animate_logo(model_output: pd.DataFrame, logo_path: str):
                 elif animation_type == 3:
                     # animation: scale
                     from_f = animations_by_type[animation_type][i][16]
+                    if from_f <= 0:
+                        from_f = 0.0000001
                     # Check if there is a next scale animation
                     if i < len(animations_by_type[animation_type]) - 1:
                         # animation endpoint is next scale animation's starting point
@@ -183,6 +188,10 @@ def animate_logo(model_output: pd.DataFrame, logo_path: str):
                 elif animation_type == 4:
                     # animation: rotate
                     from_degree = animations_by_type[animation_type][i][17]
+                    if from_degree < 0:
+                        from_degree = 0
+                    elif from_degree > 360:
+                        from_degree = 360
                     # Get midpoints
                     midpoints = get_midpoint_of_path_bbox(logo_path, animation_id)
                     # Check if there is a next scale animation
@@ -195,11 +204,11 @@ def animate_logo(model_output: pd.DataFrame, logo_path: str):
                     current_animations.append(_animation_rotate(animation_id, begin, dur, from_degree, to_degree, midpoints))
                 elif animation_type == 5:
                     # animation: skewX
-                    from_x = animations_by_type[animation_type][i][18]
+                    from_x = int(animations_by_type[animation_type][i][18])
                     # Check if there is a next skewX animation
                     if i < len(animations_by_type[animation_type]) - 1:
                         # animation endpoint is next skewX animation's starting point
-                        to_x = animations_by_type[animation_type][i+1][18]
+                        to_x = int(animations_by_type[animation_type][i+1][18])
                     else:
                         # animation endpoint is final position of object
                         to_x = 1
@@ -215,11 +224,11 @@ def animate_logo(model_output: pd.DataFrame, logo_path: str):
                     current_animations.append(_animation_skewX(animation_id, begin, dur, from_x, to_x))
                 elif animation_type == 6:
                     # animation: skewY
-                    from_y = animations_by_type[animation_type][i][19]
+                    from_y = int(animations_by_type[animation_type][i][19])
                     # Check if there is a next skewY animation
                     if i < len(animations_by_type[animation_type]) - 1:
                         # animation endpoint is next skewY animation's starting point
-                        to_y = animations_by_type[animation_type][i+1][19]
+                        to_y = int(animations_by_type[animation_type][i+1][19])
                     else:
                         # animation endpoint is final position of object
                         to_y = 1
@@ -267,6 +276,10 @@ def animate_logo(model_output: pd.DataFrame, logo_path: str):
                 elif animation_type == 8:
                     # animation: opacity
                     from_f = animations_by_type[animation_type][i][23] / 100 # percent
+                    if from_f < 0:
+                        from_f = 0
+                    elif from_f > 1:
+                        from_f = 1
                     # Check if there is a next opacity animation
                     if i < len(animations_by_type[animation_type]) - 1:
                         # animation endpoint is next opacity animation's starting point
@@ -278,6 +291,8 @@ def animate_logo(model_output: pd.DataFrame, logo_path: str):
                 elif animation_type == 9:
                     # animation: blur
                     from_f = animations_by_type[animation_type][i][24]
+                    if from_f <= 0:
+                        from_f = 1
                     # Check if there is a next blur animation
                     if i < len(animations_by_type[animation_type]) - 1:
                         # animation endpoint is next blur animation's starting point
@@ -299,7 +314,7 @@ def animate_logo(model_output: pd.DataFrame, logo_path: str):
     _insert_animations(total_animations, logo_path, logo_path)
 
 def _convert_to_hex_str(i: int):
-    h = str(hex(i))[2:]
+    h = str(hex(int(i)))[2:]
     if i < 16:
         h = '0' + h
     return h
